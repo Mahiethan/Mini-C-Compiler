@@ -1,0 +1,90 @@
+ program ::= extern_list decl_list 
+           | decl_list
+-------------------------------------------------
+extern_list ::= extern_list extern
+               |  extern
+
+//////////////////////////////////////////////// Removing left recursion
+
+extern_list ::= extern extern_list'
+extern_list' ::= extern extern_list' | epsilon
+
+-------------------------------------------------
+
+extern ::= "extern" type_spec IDENT "(" params ")" ";"
+
+-------------------------------------------------
+
+ decl_list ::= decl_list decl
+             |  decl
+
+///////////////////////////////////////////////// Removing left recursion
+
+dec_list ::= decl decl_list'
+dec_list' ::= decl decl_list' | epsilon
+
+-------------------------------------------------
+
+decl ::= var_decl 
+        |  fun_decl
+
+-------------------------------------------------
+
+var_decl ::= var_type IDENT ";" 
+
+-------------------------------------------------
+
+ type_spec ::= "void"
+             |  var_type
+
+-------------------------------------------------
+
+var_type  ::= "int" |  "float" |  "bool"
+
+-------------------------------------------------
+
+fun_decl ::= type_spec IDENT "(" params ")" block
+
+-------------------------------------------------
+
+params ::= param_list  
+          |  "void" | epsilon
+
+-------------------------------------------------
+
+param_list ::= param_list "," param 
+              |  param
+
+//////////////////////////////////////////////// Removing left recursion
+
+param_list ::= param param_list'
+param_list' ::= "," param param_list' | epsilon
+
+-------------------------------------------------
+
+param ::= var_type IDENT
+
+-------------------------------------------------
+
+block ::= "{" local_decls stmt_list "}"
+
+-------------------------------------------------
+
+local_decls ::= local_decls local_decl
+               |  epsilon
+
+//////////////////////////////////////////////// Removing left recursion
+
+local_decls ::= epsilon local_decls'
+local_decls' ::= local_decl local_decls' | epsilon
+
+local_decls ::= local_decls'
+local_decls' ::= local_decl local_decls' | epsilon
+
+--------------------------------------------------
+
+local_decl ::= var_type IDENT ";"
+
+--------------------------------------------------
+
+...
