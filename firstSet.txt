@@ -1,0 +1,52 @@
+FIRST(program) = FIRST(extern_list) + FIRST(decl_list)
+
+FIRST(extern_list) = FIRST(extern)
+
+FIRST(extern) = {"extern"}
+
+FIRST(dec_list) = FIRST(decl)
+
+FIRST(decl) = FIRST(var_decl) + FIRST(func_decl)
+
+FIRST(var_decl) = FIRST(var_type)
+
+FIRST(type_spec) = {"} + FIRST(var_type)
+
+FIRST(var_type) = {"int","float","bool"}
+
+FIRST(fun_decl) = FIRST(type_spec)
+
+FIRST(params) = FIRST(param_list) + {"void",epsilon}
+
+FIRST(param_list) = FIRST(param) + {epsilon}
+
+FIRST(param) = FIRST(var_type)
+
+FIRST(block) = {"{"}
+
+FIRST(local_decls) = FIRST(var_type)
+
+FIRST(stmt_list) = FIRST(stmt) + {epsilon}
+
+FIRST(stmt) = FIRST(expr_stmt) + FIRST(block) + FIRST(if_stmt) + FIRST(while_stmt) + FIRST(return_stmt)
+
+FIRST(expr_stmt) = FIRST(expr)
+
+FIRST(while_stmt) = {"while"}
+
+FIRST(if_stmt) = {"if"}
+
+FIRST{else_stmt} = {"else",epsilon}
+
+FIRST{return_stmt} = FIRST(expr) + {";"}
+
+FIRST(expr) = {IDENT} + FIRST(rval)
+
+FIRST(rval) = {INT_LIT,FLOAT_LIT,BOOL_LIT,IDENT,"(","-","!"}
+
+FIRST(args) = FIRST(arg_list) + {epsilon}
+
+FIRST(arg_list) = FIRST(expr)
+
+
+

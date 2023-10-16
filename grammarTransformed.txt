@@ -203,11 +203,28 @@ rval ::= rval "||" rval
 //////////////////////////////////////////////// Removing left recursion
 
 
-# rval ::= INT_LIT rval' | FLOAT_LIT rval' | BOOL_LIT rval'
+rval ::= INT_LIT rval' | FLOAT_LIT rval' | BOOL_LIT rval'
         | IDENT rval' | IDENT "(" args ")" rval'
         | "(" expr ")" rval' 
         | "-" rval rval' | "!" rval rval'
         
+
+rval' ::= "*" rval rval' | "/" rval rval' | "%" rval rval'
+        | "+" rval rval'  | "-" rval rval'
+        | "<=" rval rval' | "<" rval rval' | ">=" rval rval' | ">" rval rval'
+        | "==" rval rval' | "!=" rval rval' 
+        | "&&" rval rval'
+        | "||" rval  rval'
+        | epsilon
+
+//////////////////////////////////////////////// Left factoring (rval)
+
+# rval ::= INT_LIT rval' | FLOAT_LIT rval' | BOOL_LIT rval'
+        | IDENT rval_ident
+        | "(" expr ")" rval' 
+        | "-" rval rval' | "!" rval rval'
+
+# rval_ident ::= rval' | "(" args ")" rval'
 
 # rval' ::= "*" rval rval' | "/" rval rval' | "%" rval rval'
         | "+" rval rval'  | "-" rval rval'
