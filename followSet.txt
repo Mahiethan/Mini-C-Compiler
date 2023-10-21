@@ -1,65 +1,35 @@
-FOLLOW(program) = $
+FOLLOW(program) = {$}
 
-FOLLOW(extern_list) = {"void", "int", "float", "bool"}
+// Creating FOLLOW() sets for non-terminals that have epsilon-productions
 
 FOLLOW(extern_list') = {"void", "int", "float", "bool"}
 
-FOLLOW(extern) = {"extern","void", "int", "float", "bool"}
-
-FOLLOW(decl_list) = $
-
-FOLLOW(decl_list') = $
-
-FOLLOW(decl) = {"void", "int", "float", "bool", $}
-
-FOLLOW(var_decl) = {"void", "int", "float", "bool", $}
-
-FOLLOW(type_spec) = {IDENT}
-
-FOLLOW(var_type) = {IDENT}
-
-FOLLOW(fun_decl) = {"void", "int", "float", "bool", $}
+FOLLOW(decl_list') = {$}
 
 FOLLOW(params) = {")"}
 
-FOLLOW(param_list) = {")"}
-
 FOLLOW(param_list') = {")"}
 
-FOLLOW(param) = {",",")"}
-
-FOLLOW(block) = {"void", "int", "float", "bool", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, "(", "-", "!", ";", "{", "if", "while", "return", "}", $}
-
-FOLLOW(local_decls) = {IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, "(", "-", "!", ";", "{", "if", "while", "return", "}"}
-
-FOLLOW(local_decl) = {"int", "float", "bool", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, "(", "-", "!", ";", "{", "if", "while", "return", "}"}
+FOLLOW(local_decls) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, ";", "{", "if", "while", "return", "}"}
 
 FOLLOW(stmt_list) = {"}"}
 
-FOLLOW(stmt) = {IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, "(", "-", "!", ";", "{", "if", "while", "return", "}"}
+FOLLOW(else_stmt) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, ";", "{", "if", "while", "return", "}"}
 
-FOLLOW(expr_stmt) = {IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, "(", "-", "!", ";", "{", "if", "while", "return", "}"}
+FOLLOW(rval_eight') = {";", ")", ","}
 
-FOLLOW(while_stmt) = {IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, "(", "-", "!", ";", "{", "if", "while", "return", "}"}
+FOLLOW(rval_seven') = {"||", ";", ")", ","}
 
-FOLLOW(if_stmt) = {IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, "(", "-", "!", ";", "{", "if", "while", "return", "}"}
+FOLLOW(rval_six') = {"&&", "||", ";", ")", ","}
 
-FOLLOW(else_stmt) = {IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, "(", "-", "!", ";", "{", "if", "while", "return", "}"}
+FOLLOW(rval_five') = {"==", "!=", "&&", "||", ";", ")", ","}
 
-FOLLOW(return_stmt) = {IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, "(", "-", "!", ";", "{", "if", "while", "return", "}"}
+FOLLOW(rval_four') = {"<=", "<", ">=", ">", "==", "!=", "&&", "||", ";", ")", ","}
 
-FOLLOW(return_stmt') = {IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, "(", "-", "!", ";", "{", "if", "while", "return", "}"}
+FOLLOW(rval_three') = {"+", "-", "<=", "<", ">=", ">", "==", "!=", "&&", "||", ";", ")", ","}
 
-FOLLOW(expr) = {";", ")", ","}
-
-FOLLOW(rval) = {";", ")", "," , "*", "/", "%", "+", "-", "<=", "<", ">=", ">", "==", "!=", "&&", "||"}
-
-FOLLOW(rval_ident) = {";", ")", "," , "*", "/", "%", "+", "-", "<=", "<", ">=", ">", "==", "!=", "&&", "||"}
-
-FOLLOW(rval') = {";", ")", "," , "*", "/", "%", "+", "-", "<=", "<", ">=", ">", "==", "!=", "&&", "||"}
+FOLLOW(rval) = {"*", "/", "%", "+", "-", "<=", "<", ">=", ">", "==", "!=", "&&", "||", ";", ")", ","}
 
 FOLLOW(args) ={")"}
-
-FOLLOW(arg_list) = {")"}
 
 FOLLOW(arg_list') = {")"}

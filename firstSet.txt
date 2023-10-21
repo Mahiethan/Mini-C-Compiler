@@ -1,140 +1,91 @@
-FIRST(program) = FIRST(extern_list) + FIRST(decl_list)
-# FIRST(program) = {"extern", "void", "int", "float", "bool"}
+FIRST(programStart) = {"extern", "void", "int", "float", "bool"}
 
--------------------------------------------------
+FIRST(program) = {"extern", "void", "int", "float", "bool"}
 
-FIRST(extern_list) = FIRST(extern)
-# FIRST(extern_list) = {"extern"}
+FIRST(extern_list) = {"extern"}
 
-FIRST(extern_list') = FIRST(extern_list) + {epsilon}
-# FIRST(extern_list') = {"extern", epsilon}
+FIRST(extern_list') = {"extern"}
 
--------------------------------------------------
+FIRST(extern) = {"extern"}
 
-# FIRST(extern) = {"extern"}
+FIRST(decl_list) = {"void", "int", "float", "bool"}
 
--------------------------------------------------
+FIRST(decl_list') = {"void", "int", "float", "bool", epsilon}
 
-FIRST(dec_list) = FIRST(decl)
-? FIRST(dec_list) = {"void", "int", "float", "bool"}
+FIRST(decl) = {"void", "int", "float", "bool"}
 
-FIRST(dec_list') = FIRST(decl_list) + {epsilon}
-? FIRST(dec_list') =  {"void", "int", "float", "bool", epsilon}
+FIRST(var_decl) = {"int", "float", "bool"}
 
--------------------------------------------------
+FIRST(type_spec) = {"void", "int", "float", "bool"}
 
-FIRST(decl) = FIRST(var_decl) U FIRST(fun_decl)
-FIRST(decl) = {"int", "float", "bool"} U {"void", "int", "float", "bool"}
-? FIRST(decl) = {"void", "int", "float", "bool"}
+FIRST(var_type) = {"int", "float", "bool"}
 
--------------------------------------------------
+FIRST(fun_decl) = {"void", "int", "float", "bool"}
 
-FIRST(var_decl) = FIRST(var_type)
-# FIRST(var_decl) = {"int", "float", "bool"}
+FIRST(params) = {"int", "float", "bool", "void", epsilon}
 
--------------------------------------------------
+FIRST(param_list) = {"int", "float", "bool"}
 
-FIRST(type_spec) = {"void"} U FIRST(var_type)
-# FIRST(type_spec) = {"void", "int", "float", "bool"}
+FIRST(param_list') = {",", epsilon}
 
--------------------------------------------------
+FIRST(param) = {"int", "float", "bool"}
 
-# FIRST(var_type) = {"int", "float", "bool"}
+FIRST(block) = {"{"}
 
--------------------------------------------------
+FIRST(local_decls) = {"int", "float", "bool", epsilon}
 
-FIRST(fun_decl) = FIRST(type_spec)
-# FIRST(fun_decl) = {"void", "int", "float", "bool"}
+FIRST(local_decl) = {"int", "float", "bool"}
 
--------------------------------------------------
+FIRST(stmt_list) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, ";", "{", "if", "while", "return", epsilon}
 
-FIRST(params) = FIRST(param_list) U {"void", epsilon}
-# FIRST(params) = {"int", "float", "bool", "void", epsilon}
+FIRST(stmt) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, ";", "{", "if", "while", "return"}
 
--------------------------------------------------
+FIRST(expr_stmt) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, ";"}
 
-FIRST(param_list) = FIRST(param)
-# FIRST(param_list) = {"int", "float", "bool"}
+FIRST(while_stmt) = {"while"}
 
-# FIRST(param_list') = {"," , epsilon}
+FIRST(if_stmt) = {"if"}
 
--------------------------------------------------
+FIRST(else_stmt) = {"else", epsilon}
 
-FIRST(param) = FIRST(var_type)
-# FIRST(param) = {"int", "float", "bool"}
+FIRST(return_stmt) = {"return"}
 
--------------------------------------------------
+FIRST(return_stmt') = {";", "-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
 
-# FIRST(block) = {"{"}
+FIRST(expr) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
 
--------------------------------------------------
+FIRST(rval_eight) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
 
-FIRST(local_decls) = FIRST(local_decl) U {epsilon}
-# FIRST(local_decls) = {"int", "float", "bool", epsilon}
+FIRST(rval_eight') = {"||", epsilon}
 
+FIRST(rval_seven) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
 
--------------------------------------------------
+FIRST(rval_seven') = {"&&", epsilon}
 
-FIRST(local_decl) = FIRST(var_type)
-# FIRST(local_decl) = {"int", "float", "bool"}
+FIRST(rval_six) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
 
--------------------------------------------------
+FIRST(rval_six') = {"==", "!=", epsilon}
 
-FIRST(stmt_list) = FIRST(stmt) U {epsilon}
-# FIRST(stmt_list) = {IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, IDENT, "(", "-", "!", ";", "{", "if", "while", "return", epsilon}
+FIRST(rval_five) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
 
--------------------------------------------------
+FIRST(rval_five') = {"<=", "<", ">=", ">", epsilon}
 
-FIRST(stmt) = FIRST(expr_stmt) U FIRST(block) U FIRST(if_stmt) U FIRST(while_stmt) U FIRST(return_stmt)
-# FIRST(stmt) = {IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, IDENT, "(", "-", "!", ";", "{", "if", "while", "return"}
+FIRST(rval_four) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
 
--------------------------------------------------
+FIRST(rval_four') = {"+", "-", epsilon}
 
-FIRST(expr_stmt) = FIRST(expr) U {";"}
-# FIRST(expr_stmt) = {IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, IDENT, "(", "-", "!", ";"}
+FIRST(rval_three) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
 
--------------------------------------------------
+FIRST(rval_three') = {"*", "/", "%", epsilon}
 
-# FIRST(while_stmt) = {"while"}
+FIRST(rval_two) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
 
--------------------------------------------------
+FIRST(rval_one) = {"(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
 
-# FIRST(if_stmt) = {"if"}
+FIRST(rval) = {"(", epsilon}
 
--------------------------------------------------
+FIRST(args) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, epsilon}
 
-# FIRST{else_stmt} = {"else", epsilon}
+FIRST(arg_list) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
 
--------------------------------------------------
-
-# FIRST{return_stmt} = {"return"}
-
-FIRST{return_stmt'} = {";"} U FIRST(expr)
-# FIRST{return_stmt'} = {";", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, IDENT, "(", "-", "!"}
-
--------------------------------------------------
-
-FIRST(expr) = {IDENT} U FIRST(rval)
-# FIRST(expr) = {IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, IDENT, "(", "-", "!"}
-
--------------------------------------------------
-
-# FIRST(rval) = {INT_LIT, FLOAT_LIT, BOOL_LIT, IDENT, "(", "-", "!"}
-
-FIRST(rval_ident) = FIRST(rval') U {"("}
-# FIRST(rval_ident) = {"*", "/", "%", "+", "-", "<=", "<", ">=", ">", "==", "!=", "&&", "||", epsilon, "("}
-
-# FIRST(rval') = {"*", "/", "%", "+", "-", "<=", "<", ">=", ">", "==", "!=", "&&", "||", epsilon}
-
--------------------------------------------------
-
-FIRST(args) = FIRST(arg_list) U {epsilon}
-# FIRST(args) = {IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, IDENT, "(", "-", "!", epsilon}
-
--------------------------------------------------
-
-FIRST(arg_list) = FIRST(expr arg_list')
-expr is non-nullable
-# FIRST(arg_list) = FIRST(expr) = {IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, IDENT, "(", "-", "!"}
-
-# FIRST(arg_list') = {",", epsilon}
+FIRST(arg_list') = {",", epsilon}

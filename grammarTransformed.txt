@@ -421,7 +421,7 @@ arg_list' ::= "," arg_list | epsilon
 
 FINAL GRAMMAR (Applying Precedence):
 
-program' ::= program $
+programStart ::= program $
 
 program ::= extern_list decl_list 
            | decl_list
@@ -543,3 +543,5 @@ args ::= arg_list
 arg_list ::= expr arg_list'
 
 arg_list' ::= "," arg_list | epsilon
+
+// 46 non-terminals
