@@ -436,17 +436,11 @@ decl_list ::= decl decl_list'
 
 decl_list' ::= decl_list | epsilon
 
-decl ::= var_decl 
-        |  fun_decl
-
-var_decl ::= var_type IDENT ";" 
-
-type_spec ::= "void"
-             |  var_type
-
 var_type  ::= "int" |  "float" |  "bool"
 
-fun_decl ::= type_spec IDENT "(" params ")" block
+decl ::= var_type IDENT decl' | "void" IDENT "(" params ")" block
+
+decl' ::= ";" | "(" params ")" block
 
 params ::= param_list  
           |  "void" | epsilon
@@ -544,4 +538,4 @@ arg_list ::= expr arg_list'
 
 arg_list' ::= "," arg_list | epsilon
 
-// 46 non-terminals
+// 44 non-terminals

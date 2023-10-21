@@ -14,13 +14,9 @@ FIRST(decl_list') = {"void", "int", "float", "bool", epsilon}
 
 FIRST(decl) = {"void", "int", "float", "bool"}
 
-FIRST(var_decl) = {"int", "float", "bool"}
-
-FIRST(type_spec) = {"void", "int", "float", "bool"}
+FIRST(decl') = 
 
 FIRST(var_type) = {"int", "float", "bool"}
-
-FIRST(fun_decl) = {"void", "int", "float", "bool"}
 
 FIRST(params) = {"int", "float", "bool", "void", epsilon}
 
