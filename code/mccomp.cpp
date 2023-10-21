@@ -431,13 +431,11 @@ vector<TOKEN_TYPE> FIRST_decl_list_prime{VOID_TOK,INT_TOK,FLOAT_TOK,BOOL_TOK};
 
 vector<TOKEN_TYPE> FIRST_decl{VOID_TOK,INT_TOK,FLOAT_TOK,BOOL_TOK}; 
 
-vector<TOKEN_TYPE> FIRST_var_decl{INT_TOK,FLOAT_TOK,BOOL_TOK};
+vector<TOKEN_TYPE> FIRST_decl_prime{SC, LPAR}; 
 
-vector<TOKEN_TYPE> FIRST_type_spec{VOID_TOK,INT_TOK,FLOAT_TOK,BOOL_TOK};
+vector<TOKEN_TYPE> FIRST_type_spec{VOID_TOK, INT_TOK, FLOAT_TOK, BOOL_TOK};
 
 vector<TOKEN_TYPE> FIRST_var_type{INT_TOK,FLOAT_TOK,BOOL_TOK};
-
-vector<TOKEN_TYPE> FIRST_fun_decl{VOID_TOK,INT_TOK,FLOAT_TOK,BOOL_TOK};
 
 vector<TOKEN_TYPE> FIRST_params{VOID_TOK,INT_TOK,FLOAT_TOK,BOOL_TOK};
 
@@ -565,12 +563,11 @@ bool match(TOKEN_TYPE token)
 
 bool p_extern_list(); bool p_extern_list_prime();
 bool p_extern();
+bool p_type_spec();
 bool p_decl_list(); bool p_decl_list_prime();
 bool p_decl();
-bool p_var_decl();
-bool p_type_spec();
+bool p_decl_prime();
 bool p_var_type();
-bool p_fun_decl();
 bool p_params();
 bool p_param_list(); bool p_param_list_prime();
 bool p_param();
@@ -594,20 +591,575 @@ bool p_rval_three(); bool p_rval_three_prime();
 bool p_rval_two(); bool p_rval_one(); bool p_rval();
 bool p_args(); bool p_arg_list(); bool p_arg_list_prime();
 
+bool p_arg_list_prime()
+{
+  if(CurTok.type == COMMA)
+  {
+    return match(COMMA) & p_arg_list();
+  }
+  else
+  {
+    if(contains(CurTok.type, FOLLOW_arg_list_prime))
+    {
+      cout<<"eat"<<endl;
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+  }
+}
+
+bool p_arg_list()
+{
+  return p_expr() & p_arg_list_prime();
+}
+
+bool p_args()
+{
+  if(contains(CurTok.type,FIRST_arg_list))
+    return p_arg_list();
+  else
+  {
+    if(contains(CurTok.type,FOLLOW_args))
+    {
+      cout<<"eat"<<endl;
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+  }
+}
+
+bool p_rval()
+{
+  cout<<"rval"<<endl;
+  if(CurTok.type == LPAR)
+    return match(LPAR) & p_args() & match(RPAR);
+  else
+  {
+    if(contains(CurTok.type,FOLLOW_rval))
+    {
+      cout<<"eat"<<endl;
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+  }
+}
+
+bool p_rval_one()
+{
+  cout<<"rval_one"<<endl;
+  cout<<CurTok.type<<endl;
+  if(CurTok.type == LPAR)
+  {
+    return match(LPAR) & p_expr() & match(RPAR);
+  }
+  else if(CurTok.type == INT_LIT)
+  {
+    return match(INT_LIT);
+  }
+  else if(CurTok.type == FLOAT_LIT)
+  {
+    return match(FLOAT_LIT);
+  }
+  else if(CurTok.type == BOOL_LIT)
+  {
+    return match(BOOL_LIT);
+  }
+  else
+  {
+    return false;
+  }
+}
+
+
+bool p_rval_two()
+{
+  cout<<"rval_two"<<endl;
+  if(CurTok.type == MINUS)
+  {
+    return match(MINUS) & p_rval_one();
+  }
+  else if(CurTok.type == NOT)
+  {
+    return match(NOT) & p_rval_one();
+  }
+  else if(contains(CurTok.type,FIRST_rval_one))
+  {
+    return p_rval_one();
+  }
+  else
+  {
+    return false;
+  }
+}
+
+bool p_rval_three()
+{
+  cout<<"rval_three"<<endl;
+  return p_rval_two() & p_rval_three_prime();
+}
+
+bool p_rval_three_prime()
+{
+  cout<<"rval_three'"<<endl;
+  if(CurTok.type == ASTERIX)
+  {
+    return match(ASTERIX) & p_rval_two() & p_rval_three_prime();
+  }
+  else if(CurTok.type == DIV)
+  {
+    return match(DIV) & p_rval_two() & p_rval_three_prime();
+  }
+  else if(CurTok.type == MOD)
+  {
+    return match(MOD) & p_rval_two() & p_rval_three_prime();
+  }
+  else
+  {
+    if(contains(CurTok.type,FOLLOW_rval_three_prime))
+    {
+      cout<<"eat"<<endl;
+      return true;
+    }
+    else
+      return false;
+  }
+}
+
+bool p_rval_four()
+{
+  cout<<"rval_four"<<endl;
+  return p_rval_three() & p_rval_four_prime();
+}
+
+bool p_rval_four_prime()
+{
+  cout<<"rval_four'"<<endl;
+  cout<<CurTok.type<<endl;
+  if(CurTok.type == PLUS)
+  {
+    return match(PLUS) & p_rval_three() & p_rval_four_prime();
+  }
+  else if(CurTok.type == MINUS)
+  {
+    return match(MINUS) & p_rval_three() & p_rval_four_prime();
+  }
+  else
+  {
+    if(contains(CurTok.type,FOLLOW_rval_four_prime))
+    {
+      cout<<"eat"<<endl;
+      return true;
+    }
+    else
+      return false;
+  }
+}
+
+bool p_rval_five()
+{
+  cout<<"rval_five"<<endl;
+  return p_rval_four() & p_rval_five_prime();
+}
+
+bool p_rval_five_prime()
+{
+  cout<<"rval_five'"<<endl;
+  if(CurTok.type == LE)
+  {
+    return match(LE) & p_rval_four() & p_rval_five_prime();
+  }
+  else if(CurTok.type == LT)
+  {
+    return match(LT) & p_rval_four() & p_rval_five_prime();
+  }
+  else if(CurTok.type == GE)
+  {
+    return match(GE) & p_rval_four() & p_rval_five_prime();
+  }
+  else if(CurTok.type == GT)
+  {
+    return match(GT) & p_rval_four() & p_rval_five_prime();
+  }
+  else
+  {
+    if(contains(CurTok.type,FOLLOW_rval_five_prime))
+    {
+      cout<<"eat"<<endl;
+      return true;
+    }
+    else
+      return false;
+  }
+}
+
+bool p_rval_six()
+{
+  cout<<"rval_six"<<endl;
+  return p_rval_five() & p_rval_six_prime();
+}
+
+bool p_rval_six_prime()
+{
+  cout<<"rval_six'"<<endl;
+  if(CurTok.type == EQ)
+  {
+    return match(EQ) & p_rval_five() & p_rval_six_prime();
+  }
+  else if(CurTok.type == NE)
+  {
+    return match(NE) & p_rval_five() & p_rval_six_prime();
+  }
+  else
+  {
+    if(contains(CurTok.type,FOLLOW_rval_six_prime))
+    {
+      cout<<"eat"<<endl;
+      return true;
+    }
+    else
+      return false;
+  }
+}
+
+bool p_rval_seven()
+{
+  cout<<"rval_seven"<<endl;
+  return p_rval_six() & p_rval_seven_prime();
+}
+
+bool p_rval_seven_prime()
+{
+  cout<<"rval_seven'"<<endl;
+  if(CurTok.type == AND)
+  {
+    return match(AND) & p_rval_six() & p_rval_seven_prime();
+  }
+  else
+  {
+    if(contains(CurTok.type,FOLLOW_rval_seven_prime))
+    {
+      cout<<"eat"<<endl;
+      return true;
+    }
+    else
+      return false;
+  }
+}
+
+bool p_rval_eight()
+{
+  cout<<"rval_eight"<<endl;
+  return p_rval_seven() & p_rval_eight_prime();
+}
+
+bool p_rval_eight_prime()
+{
+  cout<<"rval_eight'"<<endl;
+  if(CurTok.type == OR)
+  {
+    return match(OR) & p_rval_seven() & p_rval_eight_prime();
+  }
+  else
+  {
+    if(contains(CurTok.type,FOLLOW_rval_eight_prime))
+    {
+      cout<<"eat"<<endl;
+      return true;
+    }
+    else
+      return false;
+  }
+}
+
+bool p_return_stmt_prime()
+{
+  cout<<"return_stmt'"<<endl;
+  if(CurTok.type == SC)
+  {
+    return match(SC);
+  }
+  else if(contains(CurTok.type,FIRST_expr))
+  {
+    return p_expr() & match(SC);
+  }
+  else
+  {
+    return false;
+  }
+}
+
+bool p_return_stmt()
+{
+  cout<<"return_stmt"<<endl;
+  return match(RETURN) & p_return_stmt_prime();
+}
+
+bool p_expr()
+{
+  cout<<"expr"<<endl;
+  if(CurTok.type == IDENT)
+  {
+    return match(IDENT) & match(ASSIGN) & p_expr();
+  }
+  else if(contains(CurTok.type,FIRST_rval_eight))
+  {
+    return p_rval_eight();
+  }
+  else
+  {
+    return false;
+  }
+}
+
+bool p_else_stmt()
+{
+  cout<<"else_stmt"<<endl;
+  if(CurTok.type == ELSE)
+  {
+    return match(ELSE) & p_block();
+  }
+  else
+  {
+    if(contains(CurTok.type,FOLLOW_else_stmt))
+    {
+      cout<<"eat"<<endl;
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+  }
+}
+
+
+bool p_if_stmt()
+{
+  cout<<"if_stmt"<<endl;
+  return match(IF) & match(LPAR) & p_expr() & match(RPAR) & p_block() & p_else_stmt();
+}
+
+bool p_while_stmt()
+{
+  return match(WHILE) & match(LPAR) & p_expr() & match(RPAR) & p_stmt();
+}
+
+bool p_expr_stmt()
+{
+  cout<<"expr_stmt"<<endl;
+  if(contains(CurTok.type, FIRST_expr))
+  {
+    return p_expr();
+  }
+  else if(CurTok.type == SC)
+  {
+    return match(SC);
+  }
+  else
+  {
+    return false;
+  }
+}
+
+bool p_stmt()
+{
+  cout<<"stmt"<<endl;
+  if(contains(CurTok.type,FIRST_expr_stmt))
+  {
+    return p_expr_stmt();
+  }
+  else if(contains(CurTok.type,FIRST_block))
+  {
+    return p_block();
+  }
+  else if(contains(CurTok.type,FIRST_if_stmt))
+  {
+    return p_if_stmt();
+  }
+  else if(contains(CurTok.type,FIRST_while_stmt))
+  {
+    return p_while_stmt();
+  }
+  else if(contains(CurTok.type,FIRST_return_stmt))
+  {
+    return p_return_stmt();
+  }
+  else
+  {
+    return false;
+  }
+}
+
+bool p_stmt_list()
+{
+  cout<<"stmt_list"<<endl;
+   cout<<CurTok.type<<endl;
+  if(contains(CurTok.type, FIRST_stmt))
+  {
+    return p_stmt() & p_stmt_list();
+  }
+  else
+  {
+    if(contains(CurTok.type, FOLLOW_stmt_list))
+    {
+      cout<<"eat"<<endl;
+      return true;
+    }
+    else
+      return false;
+  }
+}
+
+bool p_local_decl()
+{
+  cout<<"local_decl"<<endl;
+  return p_var_type() & match(IDENT) & match(SC);
+}
+
+bool p_local_decls()
+{
+   cout<<"local_decls"<<endl;
+   if(contains(CurTok.type, FIRST_local_decl))
+   {
+      return p_local_decl() & p_local_decls();
+   }
+   else
+   {
+    if(contains(CurTok.type, FOLLOW_local_decls))
+    {
+      cout<<"eat"<<endl;
+      return true;
+    }
+    else
+      return false;
+   }
+}
+
+bool p_param()
+{
+  cout<<"param"<<endl;
+  return p_var_type() & match(IDENT);
+}
+
+bool p_block()
+{
+  cout<<"block"<<endl;
+  return match(LBRA) & p_local_decls() & p_stmt_list() & match(RBRA);
+}
+
+bool p_var_type()
+{
+  cout<<"var_type"<<endl;
+  if(CurTok.type == INT_TOK)
+  {
+    return match(INT_TOK);
+  }
+  else if(CurTok.type == FLOAT_TOK)
+  {
+    return match(FLOAT_TOK);
+  }
+  else if(CurTok.type == BOOL_TOK)
+  {
+    return match(BOOL_TOK);
+  }
+  else
+  {
+    return false;
+  }
+}
+
 bool p_type_spec()
 {
-  return true;
+  cout<<"type_spec"<<endl;
+  if(CurTok.type == VOID_TOK)
+  {
+    return match(VOID_TOK);
+  }
+  else if(contains(CurTok.type,FIRST_var_type))
+  {
+    return p_var_type();
+  }
+  else
+  {
+    return false;
+  }
+}
+
+bool p_param_list_prime()
+{
+  cout<<"param_list'"<<endl;
+  if(CurTok.type == COMMA)
+    return match(COMMA) & p_param_list();
+  else
+  {
+    if(contains(CurTok.type,FOLLOW_param_list_prime))
+    {
+      cout<<"eat"<<endl;
+      return true;
+    }
+    else
+      return false;
+  }
+}
+
+bool p_param_list()
+{
+  cout<<"param_list"<<endl;
+  return p_param() & p_param_list_prime();
 }
 
 bool p_params()
 {
-  return true;
+  cout<<"params"<<endl;
+  if(contains(CurTok.type,FIRST_param_list))
+  {
+    return p_param_list();
+  }
+  else if(CurTok.type == VOID_TOK)
+  {
+    return match(VOID_TOK);
+  }
+  else //epsilon
+  {
+    if(contains(CurTok.type,FOLLOW_params))
+      {
+        cout<<"eat"<<endl;
+        return true; //consume epsilon
+      }
+      else
+        return false; //fail
+  }
+}
+
+bool p_decl_prime()
+{
+  cout<<"decl'"<<endl;
+  if(CurTok.type == SC)
+  {
+    return match(SC);
+  }
+  else if(CurTok.type == LPAR)
+  {
+    return match(LPAR) & p_params() & match(RPAR) & p_block();
+  }
+  else
+  {
+    return false; //fail
+  }
 }
 
 bool p_extern_list_prime()
 {
   cout<<"extern_list'"<<endl;
-  cout<<CurTok.type<<endl;
   if(contains(CurTok.type,FIRST_extern_list))
    {
       return p_extern_list();
@@ -620,7 +1172,7 @@ bool p_extern_list_prime()
         return true; //consume epsilon
       }
       else
-        return 1; //fail
+        return false; //fail
    }
 }
 
@@ -632,7 +1184,8 @@ bool p_extern()
 
 bool p_decl_list_prime()
 {
-  cout<<"decl_list_prime"<<endl;
+  cout<<"decl_list'"<<endl;
+  cout<<CurTok.type<<endl;
    if(contains(CurTok.type,FIRST_decl_list))
    {
       return p_decl_list();
@@ -645,32 +1198,37 @@ bool p_decl_list_prime()
         return true; //consume epsilon
       }
       else
-        return 1; //fail
+        return false; //fail
    }
 }
 
 bool p_decl()
 {
   cout<<"decl"<<endl;
-  //CONTINUE WORK FROM HERE
+  if(contains(CurTok.type,FIRST_var_type))
+  {
+    return p_var_type() & match(IDENT) & p_decl_prime();
+  }
+  else if(CurTok.type == VOID_TOK)
+  {
+    return match(VOID_TOK) & match(IDENT) & match(LPAR) & p_params() & match(RPAR) & p_block();
+  }
+  else
+  {
+    return false; //fail
+  }
 }
 
 bool p_decl_list()
 {
   cout<<"decl_list"<<endl;
-  if(p_decl())
-    return p_decl_list_prime();
-  else
-    return 1; //fail
+  return p_decl() & p_decl_list_prime();
 }
 
 bool p_extern_list()
 {
   cout<<"extern_list"<<endl;
-  if(p_extern())
-    return p_extern_list_prime();
-  else
-    return 1; //fail
+  return p_extern() & p_extern_list_prime();
 }
 
 bool p_program()
@@ -683,12 +1241,10 @@ bool p_program()
   else
     error
   */
+  cout<<"program"<<endl;
   if(contains(CurTok.type, FIRST_extern_list) == true)
   {
-    if(p_extern_list())
-      return p_decl_list();
-    else
-      return 1; //fail
+     return p_extern_list() & p_decl_list();
   }
   else if(contains(CurTok.type, FIRST_decl_list) == true)
   {

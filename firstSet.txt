@@ -14,7 +14,9 @@ FIRST(decl_list') = {"void", "int", "float", "bool", epsilon}
 
 FIRST(decl) = {"void", "int", "float", "bool"}
 
-FIRST(decl') = 
+FIRST(decl') = {";", "("}
+
+FIRST(type_spec) = {"void", "int", "float", "bool"}
 
 FIRST(var_type) = {"int", "float", "bool"}
 
