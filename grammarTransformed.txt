@@ -482,9 +482,9 @@ return_stmt ::= "return" return_stmt'
 
 return_stmt' ::= ";" | expr ";"
 
-//FIX THIS!!
-expr ::= IDENT "=" expr
-        | rval_eight
+exprStart ::= IDENT "=" exprStart | epsilon
+
+expr ::= exprStart rval_eight
 
 rval_eight ::= rval_seven rval_eight'
 
@@ -523,8 +523,8 @@ rval_three' ::= "*" rval_two rval_three'
         | "%" rval_two rval_three'
         | epsilon
 
-rval_two ::= "-" rval_one
-        | "!" rval_one
+rval_two ::= "-" rval_two
+        | "!" rval_two
         | rval_one
 
 rval_one ::= "(" expr ")"
@@ -540,4 +540,4 @@ arg_list ::= expr arg_list'
 
 arg_list' ::= "," arg_list | epsilon
 
-// 45 non-terminals
+// 46 non-terminals

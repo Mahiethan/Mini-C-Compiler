@@ -1,6 +1,4 @@
 int addition(int n, int m){
 	int result;
-    result = 5 + 3 * 2 % 3;
+    result = 3 + 4 * -!m;
 }
-
-//not working for IDENT parameters

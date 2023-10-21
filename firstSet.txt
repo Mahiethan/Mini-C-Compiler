@@ -50,6 +50,8 @@ FIRST(return_stmt) = {"return"}
 
 FIRST(return_stmt') = {";", "-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
 
+FIRST(exprStart) = {IDENT, epsilon}
+
 FIRST(expr) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
 
 FIRST(rval_eight) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}

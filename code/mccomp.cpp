@@ -375,7 +375,7 @@ static std::deque<TOKEN> tok_buffer;
 
 static TOKEN getNextToken() {
 
-  if (tok_buffer.size() == 0)
+  while(tok_buffer.size() != 2) //store two lookahead tokens
     tok_buffer.push_back(gettok());
 
   TOKEN temp = tok_buffer.front();
@@ -469,6 +469,8 @@ vector<TOKEN_TYPE> FIRST_return_stmt_prime{SC, MINUS, NOT, LPAR, IDENT, INT_TOK,
 
 vector<TOKEN_TYPE> FIRST_expr{MINUS, NOT, LPAR, IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT};
 
+vector<TOKEN_TYPE> FIRST_exprStart{IDENT};
+
 vector<TOKEN_TYPE> FIRST_rval_eight{MINUS, NOT, LPAR, IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT};
 
 vector<TOKEN_TYPE> FIRST_rval_eight_prime{OR};
@@ -519,6 +521,8 @@ vector<TOKEN_TYPE> FOLLOW_local_decls{MINUS, NOT, LPAR, IDENT, INT_TOK, FLOAT_TO
 vector<TOKEN_TYPE> FOLLOW_stmt_list{RBRA};
 
 vector<TOKEN_TYPE> FOLLOW_else_stmt{MINUS, NOT, LPAR, IDENT, INT_TOK, FLOAT_TOK, BOOL_TOK, SC, LBRA, IF, WHILE, RETURN, RBRA};
+
+vector<TOKEN_TYPE> FOLLOW_exprStart{MINUS, NOT, LPAR, IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT};
 
 vector<TOKEN_TYPE> FOLLOW_rval_eight_prime{SC, RPAR, COMMA};
 
@@ -582,6 +586,7 @@ bool p_if_stmt();
 bool p_else_stmt();
 bool p_return_stmt(); bool p_return_stmt_prime();
 bool p_expr();
+bool p_exprStart();
 bool p_rval_eight(); bool p_rval_eight_prime();
 bool p_rval_seven(); bool p_rval_seven_prime();
 bool p_rval_six(); bool p_rval_six_prime();
@@ -661,6 +666,10 @@ bool p_rval_one()
   {
     return match(LPAR) & p_expr() & match(RPAR);
   }
+  else if(CurTok.type == IDENT)
+  {
+    return match(IDENT) & p_rval();
+  }
   else if(CurTok.type == INT_LIT)
   {
     return match(INT_LIT);
@@ -685,11 +694,11 @@ bool p_rval_two()
   cout<<"rval_two"<<endl;
   if(CurTok.type == MINUS)
   {
-    return match(MINUS) & p_rval_one();
+    return match(MINUS) & p_rval_two();
   }
   else if(CurTok.type == NOT)
   {
-    return match(NOT) & p_rval_one();
+    return match(NOT) & p_rval_two();
   }
   else if(contains(CurTok.type,FIRST_rval_one))
   {
@@ -906,17 +915,40 @@ bool p_return_stmt()
 bool p_expr()
 {
   cout<<"expr"<<endl;
-  if(CurTok.type == IDENT)
+  return p_exprStart() & p_rval_eight();
+}
+
+bool p_exprStart()
+{
+  cout<<"exprStart"<<endl;
+  cout<<CurTok.type<<endl;
+  TOKEN firstLookAhead = CurTok;
+  cout<<firstLookAhead.type<<endl;
+  getNextToken();
+  cout<<CurTok.type<<endl;
+  if(firstLookAhead.type == IDENT & CurTok.type == ASSIGN)
   {
-    return match(IDENT) & match(ASSIGN) & p_expr();
-  }
-  else if(contains(CurTok.type,FIRST_rval_eight))
-  {
-    return p_rval_eight();
+      putBackToken(CurTok);
+      CurTok = firstLookAhead;
+      cout<<CurTok.type<<endl;
+      return match(IDENT) & match(ASSIGN) & p_exprStart();
+    
   }
   else
   {
-    return false;
+    putBackToken(CurTok);
+      CurTok = firstLookAhead;
+      cout<<CurTok.type<<endl;
+    if(contains(CurTok.type,FOLLOW_exprStart))
+    {
+      cout<<"eat"<<endl;
+      return true;
+    }
+    else
+    {
+      cout<<"Nope"<<endl;
+      return false;
+    }
   }
 }
 
