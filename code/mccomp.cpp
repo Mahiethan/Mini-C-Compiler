@@ -36,6 +36,8 @@
 using namespace llvm;
 using namespace llvm::sys;
 
+using namespace std;
+
 FILE *pFile;
 
 //===----------------------------------------------------------------------===//
@@ -416,11 +418,303 @@ public:
 // Recursive Descent Parser - Function call for each production
 //===----------------------------------------------------------------------===//
 
+/* FIRST() sets*/
+vector<TOKEN_TYPE> FIRST_extern_list{EXTERN};
+
+vector<TOKEN_TYPE> FIRST_extern_list_prime{EXTERN};
+
+vector<TOKEN_TYPE> FIRST_extern{EXTERN};
+
+vector<TOKEN_TYPE> FIRST_decl_list{VOID_TOK,INT_TOK,FLOAT_TOK,BOOL_TOK};
+
+vector<TOKEN_TYPE> FIRST_decl_list_prime{VOID_TOK,INT_TOK,FLOAT_TOK,BOOL_TOK}; 
+
+vector<TOKEN_TYPE> FIRST_decl{VOID_TOK,INT_TOK,FLOAT_TOK,BOOL_TOK}; 
+
+vector<TOKEN_TYPE> FIRST_var_decl{INT_TOK,FLOAT_TOK,BOOL_TOK};
+
+vector<TOKEN_TYPE> FIRST_type_spec{VOID_TOK,INT_TOK,FLOAT_TOK,BOOL_TOK};
+
+vector<TOKEN_TYPE> FIRST_var_type{INT_TOK,FLOAT_TOK,BOOL_TOK};
+
+vector<TOKEN_TYPE> FIRST_fun_decl{VOID_TOK,INT_TOK,FLOAT_TOK,BOOL_TOK};
+
+vector<TOKEN_TYPE> FIRST_params{VOID_TOK,INT_TOK,FLOAT_TOK,BOOL_TOK};
+
+vector<TOKEN_TYPE> FIRST_param_list{INT_TOK,FLOAT_TOK,BOOL_TOK};
+
+vector<TOKEN_TYPE> FIRST_param_list_prime{COMMA};
+
+vector<TOKEN_TYPE> FIRST_param{INT_TOK,FLOAT_TOK,BOOL_TOK};
+
+vector<TOKEN_TYPE> FIRST_block{LBRA};
+
+vector<TOKEN_TYPE> FIRST_local_decls{INT_TOK,FLOAT_TOK,BOOL_TOK};
+
+vector<TOKEN_TYPE> FIRST_local_decl{INT_TOK,FLOAT_TOK,BOOL_TOK};
+
+vector<TOKEN_TYPE> FIRST_stmt_list{MINUS, NOT, LPAR, IDENT, INT_TOK,FLOAT_TOK,BOOL_TOK, SC, LBRA, IF, WHILE, RETURN};
+
+vector<TOKEN_TYPE> FIRST_stmt{MINUS, NOT, LPAR, IDENT, INT_TOK,FLOAT_TOK,BOOL_TOK, SC, LBRA, IF, WHILE, RETURN};
+
+vector<TOKEN_TYPE> FIRST_expr_stmt{MINUS, NOT, LPAR, IDENT, INT_TOK,FLOAT_TOK,BOOL_TOK, SC};
+
+vector<TOKEN_TYPE> FIRST_while_stmt{WHILE};
+
+vector<TOKEN_TYPE> FIRST_if_stmt{IF};
+
+vector<TOKEN_TYPE> FIRST_else_stmt{ELSE};
+
+vector<TOKEN_TYPE> FIRST_return_stmt{RETURN};
+
+vector<TOKEN_TYPE> FIRST_return_stmt_prime{SC, MINUS, NOT, LPAR, IDENT, INT_TOK, FLOAT_TOK, BOOL_TOK};
+
+vector<TOKEN_TYPE> FIRST_expr{MINUS, NOT, LPAR, IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT};
+
+vector<TOKEN_TYPE> FIRST_rval_eight{MINUS, NOT, LPAR, IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT};
+
+vector<TOKEN_TYPE> FIRST_rval_eight_prime{OR};
+
+vector<TOKEN_TYPE> FIRST_rval_seven{MINUS, NOT, LPAR, IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT};
+
+vector<TOKEN_TYPE> FIRST_rval_seven_prime{AND};
+
+vector<TOKEN_TYPE> FIRST_rval_six{MINUS, NOT, LPAR, IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT};
+
+vector<TOKEN_TYPE> FIRST_rval_six_prime{EQ, NE};
+
+vector<TOKEN_TYPE> FIRST_rval_five{MINUS, NOT, LPAR, IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT};
+
+vector<TOKEN_TYPE> FIRST_rval_five_prime{LE, LT, GE, GT};
+
+vector<TOKEN_TYPE> FIRST_rval_four{MINUS, NOT, LPAR, IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT};
+
+vector<TOKEN_TYPE> FIRST_rval_four_prime{PLUS, MINUS};
+
+vector<TOKEN_TYPE> FIRST_rval_three{MINUS, NOT, LPAR, IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT};
+
+vector<TOKEN_TYPE> FIRST_rval_three_prime{ASTERIX, DIV, MOD};
+
+vector<TOKEN_TYPE> FIRST_rval_two{MINUS, NOT, LPAR, IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT};
+
+vector<TOKEN_TYPE> FIRST_rval_one{LPAR, IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT};
+
+vector<TOKEN_TYPE> FIRST_rval{LPAR};
+
+vector<TOKEN_TYPE> FIRST_args{MINUS, NOT, LPAR, IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT};
+
+vector<TOKEN_TYPE> FIRST_arg_list{MINUS, NOT, LPAR, IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT};
+
+vector<TOKEN_TYPE> FIRST_arg_list_prime{COMMA};
+
+/* FOLLOW() sets*/
+vector<TOKEN_TYPE> FOLLOW_extern_list_prime{VOID_TOK,INT_TOK,FLOAT_TOK,BOOL_TOK};
+
+vector<TOKEN_TYPE> FOLLOW_decl_list_prime{EOF_TOK};
+
+vector<TOKEN_TYPE> FOLLOW_params{RPAR};
+
+vector<TOKEN_TYPE> FOLLOW_param_list_prime{RPAR};
+
+vector<TOKEN_TYPE> FOLLOW_local_decls{MINUS, NOT, LPAR, IDENT, INT_TOK, FLOAT_TOK, BOOL_TOK, SC, LBRA, IF, WHILE, RETURN, RBRA};
+
+vector<TOKEN_TYPE> FOLLOW_stmt_list{RBRA};
+
+vector<TOKEN_TYPE> FOLLOW_else_stmt{MINUS, NOT, LPAR, IDENT, INT_TOK, FLOAT_TOK, BOOL_TOK, SC, LBRA, IF, WHILE, RETURN, RBRA};
+
+vector<TOKEN_TYPE> FOLLOW_rval_eight_prime{SC, RPAR, COMMA};
+
+vector<TOKEN_TYPE> FOLLOW_rval_seven_prime{OR, SC, RPAR, COMMA};
+
+vector<TOKEN_TYPE> FOLLOW_rval_six_prime{AND, OR, SC, RPAR, COMMA};
+
+vector<TOKEN_TYPE> FOLLOW_rval_five_prime{EQ, NE, AND, OR, SC, RPAR, COMMA};
+
+vector<TOKEN_TYPE> FOLLOW_rval_four_prime{LE, LT, GE, GT, EQ, NE, AND, OR, SC, RPAR, COMMA};
+
+vector<TOKEN_TYPE> FOLLOW_rval_three_prime{PLUS, MINUS, LE, LT, GE, GT, EQ, NE, AND, OR, SC, RPAR, COMMA};
+
+vector<TOKEN_TYPE> FOLLOW_rval{ASTERIX, DIV, MOD, PLUS, MINUS, LE, LT, GE, GT, EQ, NE, AND, OR, SC, RPAR, COMMA};
+
+vector<TOKEN_TYPE> FOLLOW_args{RPAR};
+
+vector<TOKEN_TYPE> FOLLOW_arg_list_prime{RPAR};
+
+static bool contains(int type, vector<TOKEN_TYPE> list)
+{
+  for(int i = 0; i < list.size(); i++)
+  {
+    if(list[i] == type)
+      return true;
+  }
+  return false;
+}
+
+bool match(TOKEN_TYPE token)
+{
+  if(CurTok.type == token)
+  {
+    getNextToken(); //consume token
+    return true;
+  }
+  else
+    return false;
+}
+
 /* Add function calls for each production */
+
+bool p_extern_list(); bool p_extern_list_prime();
+bool p_extern();
+bool p_decl_list(); bool p_decl_list_prime();
+bool p_decl();
+bool p_var_decl();
+bool p_type_spec();
+bool p_var_type();
+bool p_fun_decl();
+bool p_params();
+bool p_param_list(); bool p_param_list_prime();
+bool p_param();
+bool p_block();
+bool p_local_decls();
+bool p_local_decl();
+bool p_stmt_list();
+bool p_stmt();
+bool p_expr_stmt();
+bool p_while_stmt();
+bool p_if_stmt();
+bool p_else_stmt();
+bool p_return_stmt(); bool p_return_stmt_prime();
+bool p_expr();
+bool p_rval_eight(); bool p_rval_eight_prime();
+bool p_rval_seven(); bool p_rval_seven_prime();
+bool p_rval_six(); bool p_rval_six_prime();
+bool p_rval_five(); bool p_rval_five_prime();
+bool p_rval_four(); bool p_rval_four_prime();
+bool p_rval_three(); bool p_rval_three_prime();
+bool p_rval_two(); bool p_rval_one(); bool p_rval();
+bool p_args(); bool p_arg_list(); bool p_arg_list_prime();
+
+bool p_type_spec()
+{
+  return true;
+}
+
+bool p_params()
+{
+  return true;
+}
+
+bool p_extern_list_prime()
+{
+  cout<<"extern_list'"<<endl;
+  cout<<CurTok.type<<endl;
+  if(contains(CurTok.type,FIRST_extern_list))
+   {
+      return p_extern_list();
+   }
+   else //epsilon
+   {
+      if(contains(CurTok.type,FOLLOW_extern_list_prime))
+      {
+        cout<<"eat"<<endl;
+        return true; //consume epsilon
+      }
+      else
+        return 1; //fail
+   }
+}
+
+bool p_extern()
+{
+  cout<<"extern"<<endl;
+  return match(EXTERN) & p_type_spec() & match(IDENT) & match(LPAR) & p_params() & match(RPAR) & match(SC);
+}
+
+bool p_decl_list_prime()
+{
+  cout<<"decl_list_prime"<<endl;
+   if(contains(CurTok.type,FIRST_decl_list))
+   {
+      return p_decl_list();
+   }
+   else //epsilon
+   {
+      if(contains(CurTok.type,FOLLOW_decl_list_prime))
+      {
+        cout<<"eat"<<endl;
+        return true; //consume epsilon
+      }
+      else
+        return 1; //fail
+   }
+}
+
+bool p_decl()
+{
+  cout<<"decl"<<endl;
+  //CONTINUE WORK FROM HERE
+}
+
+bool p_decl_list()
+{
+  cout<<"decl_list"<<endl;
+  if(p_decl())
+    return p_decl_list_prime();
+  else
+    return 1; //fail
+}
+
+bool p_extern_list()
+{
+  cout<<"extern_list"<<endl;
+  if(p_extern())
+    return p_extern_list_prime();
+  else
+    return 1; //fail
+}
+
+bool p_program()
+{
+  /*
+  if curTok is in FIRST(extern_list)
+    run extern_list()
+  else if curTok is in FIRST(decl_list)
+    run decl_list()
+  else
+    error
+  */
+  if(contains(CurTok.type, FIRST_extern_list) == true)
+  {
+    if(p_extern_list())
+      return p_decl_list();
+    else
+      return 1; //fail
+  }
+  else if(contains(CurTok.type, FIRST_decl_list) == true)
+  {
+      return p_decl_list();
+  }
+  else
+  {
+    return false; //error
+  }
+}
 
 // program ::= extern_list decl_list
 static void parser() {
   // add body
+  if(p_program())
+  {
+    if(CurTok.type == EOF_TOK)
+    {
+      cout<<"Parsing successful"<<endl;
+    }
+  }
+  else
+  {
+    cout<<"Parsing failed"<<endl;
+  }
+
 }
 
 //===----------------------------------------------------------------------===//
@@ -459,21 +753,21 @@ int main(int argc, char **argv) {
   lineNo = 1;
   columnNo = 1;
 
-  // get the first token
+  //get the first token
   getNextToken();
-  while (CurTok.type != EOF_TOK) {
-    fprintf(stderr, "Token: %s with type %d\n", CurTok.lexeme.c_str(),
-            CurTok.type);
-    getNextToken();
-  }
-  fprintf(stderr, "Lexer Finished\n");
+  // while (CurTok.type != EOF_TOK) {
+  //   fprintf(stderr, "Token: %s with type %d\n", CurTok.lexeme.c_str(),
+  //           CurTok.type);
+  //   getNextToken();
+  // }
+  // fprintf(stderr, "Lexer Finished\n");
 
   // Make the module, which holds all the code.
   TheModule = std::make_unique<Module>("mini-c", TheContext);
 
   // Run the parser now.
   parser();
-  fprintf(stderr, "Parsing Finished\n");
+  //fprintf(stderr, "Parsing Finished\n");
 
   //********************* Start printing final IR **************************
   // Print out all of the generated code into a file called output.ll
