@@ -352,15 +352,56 @@ static TOKEN gettok() {
   // Check for end of file.  Don't eat the EOF.
   if (LastChar == EOF) {
     columnNo++;
+    LastChar = getc(pFile);
     return returnTok("0", EOF_TOK);
   }
 
-  // Otherwise, just return the character as its ascii value.
+  //Changing this to check for invalid tokens, instead of passing it as ascii values:
+
+  // // Otherwise, just return the character as its ascii value.
+  // int ThisChar = LastChar;
+  // std::string s(1, ThisChar);
+  // LastChar = getc(pFile);
+  // columnNo++;
+  // return returnTok(s, int(ThisChar));
+
+  //for ascii values - +, -, *, %
+  if(LastChar == '-')
+  {
+    //cout<<"Minus "<<char(LastChar)<<endl;
+    LastChar = getc(pFile);
+    columnNo++;
+    return returnTok("-", MINUS);
+  }
+  else if(LastChar == '+')
+  {
+    //cout<<"Plus "<<char(LastChar)<<endl;
+    LastChar = getc(pFile);
+    columnNo++;
+    return returnTok("+", PLUS);
+  }
+  else if(LastChar == '*')
+  {
+    //cout<<"Asterix "<<char(LastChar)<<endl;
+    LastChar = getc(pFile);
+    columnNo++;
+    return returnTok("*", ASTERIX);
+  }
+  else if(LastChar == '%')
+  {
+    //cout<<"Mod "<<char(LastChar)<<endl;
+    LastChar = getc(pFile);
+    columnNo++;
+    return returnTok("%", MOD);
+  }
+
+  //otherwise, pass current symbol as an invalid token
   int ThisChar = LastChar;
+  //cout<<"Invalid token "<<char(ThisChar)<<endl;
   std::string s(1, ThisChar);
   LastChar = getc(pFile);
   columnNo++;
-  return returnTok(s, int(ThisChar));
+  return returnTok(s, INVALID);
 }
 
 //===----------------------------------------------------------------------===//
@@ -385,6 +426,13 @@ static TOKEN getNextToken() {
 }
 
 static void putBackToken(TOKEN tok) { tok_buffer.push_front(tok); }
+
+static void clearTokBuffer() { 
+  while(tok_buffer.size() != 0) 
+  {
+    tok_buffer.pop_front();
+  } 
+}
 
 //===----------------------------------------------------------------------===//
 // AST nodes
@@ -1291,6 +1339,7 @@ bool p_program()
 // program ::= extern_list decl_list
 static void parser() {
   // add body
+  getNextToken();
   if(p_program())
   {
     if(CurTok.type == EOF_TOK)
@@ -1343,16 +1392,31 @@ int main(int argc, char **argv) {
 
   //get the first token
   getNextToken();
-  // while (CurTok.type != EOF_TOK) {
-  //   fprintf(stderr, "Token: %s with type %d\n", CurTok.lexeme.c_str(),
-  //           CurTok.type);
-  //   getNextToken();
-  // }
-  // fprintf(stderr, "Lexer Finished\n");
+  //start lexical analysis - identify any invalid tokens before starting the parser
+  while (CurTok.type != EOF_TOK) {
+    if(CurTok.type == INVALID)
+    {
+      cout<<"Lexical error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<endl;
+      return 1;
+    }
+    //print each token
+    //fprintf(stderr, "Token: %s with type %d\n", CurTok.lexeme.c_str(),CurTok.type);
+    getNextToken();
+  }
+  fprintf(stderr, "Lexer Finished\n");
+  clearTokBuffer(); //clear token buffer before re-reading file and starting parsing
 
   // Make the module, which holds all the code.
   TheModule = std::make_unique<Module>("mini-c", TheContext);
 
+  //read file from beginning
+  fseek(pFile,0,SEEK_SET);
+
+  lineNo = 1;
+  columnNo = 1;
+
+  //skip EOF
+  getNextToken();
   // Run the parser now.
   parser();
   //fprintf(stderr, "Parsing Finished\n");
