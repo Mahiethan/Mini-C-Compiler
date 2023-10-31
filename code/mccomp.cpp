@@ -442,7 +442,7 @@ static void clearTokBuffer() {
 class ASTnode {
 public:
   virtual ~ASTnode() {}
-  virtual Value *codegen() = 0;
+  //virtual Value *codegen() = 0;
   virtual std::string to_string() const {return "";};
 };
 
@@ -454,13 +454,247 @@ class IntASTnode : public ASTnode {
 
 public:
   IntASTnode(TOKEN tok, int val) : Val(val), Tok(tok) {}
-  virtual Value *codegen() override;
+  // virtual Value *codegen() override;
   // virtual std::string to_string() const override {
   // return a sting representation of this AST node
   //};
 };
 
 /* add other AST nodes as nessasary */
+
+/// VariableASTnode - Class for referencing variables, such as "a"
+class VariableASTnode : public ASTnode{
+  TOKEN Tok;
+  string Val;
+  string Type;
+
+  public:
+  VariableASTnode(TOKEN tok, string type, string val) : Type(type), Val(val), Tok(tok) {}
+  // virtual Value *codegen() override;
+  virtual std::string to_string() const override {
+  //return a sting representation of this AST node
+    return "VarDecl: " + Type + " " + Val; 
+    // return "a";
+  };
+};
+
+/// UnaryExprASTnode - Expression class for a unary operator, like ! or - (check production `rval_two`)
+class UnaryExprASTnode : public ASTnode {
+  char Opcode;
+  std::unique_ptr<ASTnode> Operand;
+
+public:
+  UnaryExprASTnode(char Opcode, std::unique_ptr<ASTnode> Operand)
+      : Opcode(Opcode), Operand(std::move(Operand)) {}
+
+  // virtual Value *codegen() override;
+  // virtual std::string to_string() const override {
+  // return a sting representation of this AST node
+  //};
+};
+
+/// BinaryExprASTnode - Expression class for a binary operator.
+class BinaryExprASTnode : public ASTnode {
+  char Opcode;
+  std::unique_ptr<ASTnode> LHS, RHS;
+
+public:
+  BinaryExprASTnode(char Opcode, std::unique_ptr<ASTnode> LHS,
+                std::unique_ptr<ASTnode> RHS)
+      : Opcode(Opcode), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
+
+  // virtual Value *codegen() override;
+  // virtual std::string to_string() const override {
+  // return a sting representation of this AST node
+  //};
+};
+
+/// FuncCallASTnode - Expression class for function calls, including any arguments.
+class FuncCallASTnode : public ASTnode {
+  std::string Callee;
+  std::vector<std::unique_ptr<ASTnode>> Args;
+
+public:
+  FuncCallASTnode(const std::string &Callee,
+              std::vector<std::unique_ptr<ASTnode>> Args)
+      : Callee(Callee), Args(std::move(Args)) {}
+
+  // virtual Value *codegen() override;
+  // virtual std::string to_string() const override {
+  // return a sting representation of this AST node
+  //};
+};
+
+/// IfExprASTnode - Expression class for if/then/else.
+class IfExprASTnode : public ASTnode {
+  std::unique_ptr<ASTnode> Cond, Then, Else;
+
+public:
+  IfExprASTnode(std::unique_ptr<ASTnode> Cond, std::unique_ptr<ASTnode> Then,
+            std::unique_ptr<ASTnode> Else)
+      : Cond(std::move(Cond)), Then(std::move(Then)), Else(std::move(Else)) {}
+
+   // virtual Value *codegen() override;
+  // virtual std::string to_string() const override {
+  // return a sting representation of this AST node
+  //};
+};
+
+//Link to ADTs 
+//https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl07.html
+
+/// WhileExprASTnode - Expression class for while/do
+class WhileExprASTnode : public ASTnode {
+  std::unique_ptr<ASTnode> Cond, Then;
+
+public:
+  WhileExprASTnode(std::unique_ptr<ASTnode> cond, std::unique_ptr<ASTnode> then)
+      : Cond(std::move(cond)), Then(std::move(then)) {}
+
+  // virtual Value *codegen() override;
+  // virtual std::string to_string() const override {
+  // return a sting representation of this AST node
+  //};
+};
+
+/// PrototypeAST - This class represents the "prototype" for a function,
+/// which captures its name, and its argument names (thus implicitly the number
+/// of arguments the function takes).
+class PrototypeAST : public ASTnode {
+  // string returnType;
+  std::string Name;
+  std::vector<unique_ptr<VariableASTnode>> Args;
+
+public:
+  PrototypeAST(std::string &Name, std::vector<unique_ptr<VariableASTnode>> Args)
+      : Name(Name), Args(std::move(Args)) {}
+
+   const std::string &getName() const { return Name; }
+
+  // virtual Value *codegen() override;
+  virtual std::string to_string() const override {
+  //return a sting representation of this AST node
+  string name = getName();
+  string args = "";
+  //cout<<Args.size()<<endl;
+  for(int i = 0; i < Args.size(); i++)
+  {
+    //cout<<Args[i]->to_string()<<endl;
+    if(i == Args.size() - 1)
+      args.append("   ⮡ Param" + Args[i]->to_string());
+    else
+      args.append("   ⮡ Param" + Args[i]->to_string() + "\n");
+
+  }
+  return name + "\n" + args;
+  };
+};
+
+/// FunctionAST - This class represents a function definition itself.
+class FunctionAST : public ASTnode {
+  std::unique_ptr<PrototypeAST> Proto;
+  std::vector<std::unique_ptr<ASTnode>> Body;
+
+public:
+  FunctionAST(std::unique_ptr<PrototypeAST> Proto, //can have no prototypes (just block of expressions e.g. global variables)
+              std::vector<std::unique_ptr<ASTnode>> Body) //Body can contain multiple expressions
+      : Proto(std::move(Proto)), Body(std::move(Body)) {}
+
+    
+
+    // virtual Value *codegen() override;
+    virtual std::string to_string() const override{
+  //return a sting representation of this AST node
+      string proto = Proto->to_string();
+      string body = "";
+      if(Body.size() != 0)
+        body = "\n   ⮡ Function Body:";
+      for(int i = 0; i < Body.size(); i++)
+      {
+        body.append("\n     ⮡ " + Body[i]->to_string());
+      }
+
+      return "FunctionDecl: " + proto + body;
+  };
+};
+
+static vector<unique_ptr<ASTnode>> root; //root of the AST (TranslationUnitDecl)
+
+//temporary vector/string stores
+
+//null TOKEN
+TOKEN nullToken = {};
+
+static string prototypeName = "";
+static unique_ptr<VariableASTnode> argument = std::make_unique<VariableASTnode>(CurTok,"","");
+static string vartype = "";
+static string functiontype = "";
+static vector<unique_ptr<VariableASTnode>> argumentList = {};
+static vector<unique_ptr<ASTnode>> body = {};
+static TOKEN functionIdent = nullToken;
+static TOKEN variableIdent = nullToken;
+static vector<string> varNames = {}; //can have more than one variable names IDENT = IDENT = ...
+static unique_ptr<BinaryExprASTnode> assignment = std::make_unique<BinaryExprASTnode>('=', nullptr, nullptr);
+
+static string expression = "";
+
+void resetPrototypeName()
+{
+  prototypeName = "";
+}
+
+void resetAssignment()
+{
+  assignment = std::make_unique<BinaryExprASTnode>('=', nullptr, nullptr);
+}
+
+void resetVarName()
+{
+  varNames = {};
+}
+
+void resetArgument()
+{
+  argument = std::make_unique<VariableASTnode>(CurTok,"","");
+}
+
+void resetVartype()
+{
+  vartype = "";
+}
+
+void resetFunctiontype()
+{
+  functiontype = "";
+}
+
+
+void resetArgumentList()
+{
+  argumentList.clear();
+}
+
+void resetBody()
+{
+  body.clear();
+}
+
+void resetFunctionIdent()
+{
+  functionIdent = nullToken;
+}
+
+void resetVariableToken()
+{
+  variableIdent = nullToken;
+}
+
+void resetExpression()
+{
+  expression = "";
+}
+
+
 
 //===----------------------------------------------------------------------===//
 // Recursive Descent Parser - Function call for each production
@@ -709,25 +943,30 @@ bool p_rval()
 bool p_rval_one()
 {
   cout<<"rval_one"<<endl;
-  cout<<CurTok.type<<endl;
+  // cout<<CurTok.type<<endl;
   if(CurTok.type == LPAR)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(LPAR) & p_expr() & match(RPAR);
   }
   else if(CurTok.type == IDENT)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(IDENT) & p_rval();
   }
   else if(CurTok.type == INT_LIT)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(INT_LIT);
   }
   else if(CurTok.type == FLOAT_LIT)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(FLOAT_LIT);
   }
   else if(CurTok.type == BOOL_LIT)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(BOOL_LIT);
   }
   else
@@ -742,10 +981,12 @@ bool p_rval_two()
   cout<<"rval_two"<<endl;
   if(CurTok.type == MINUS)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(MINUS) & p_rval_two();
   }
   else if(CurTok.type == NOT)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(NOT) & p_rval_two();
   }
   else if(contains(CurTok.type,FIRST_rval_one))
@@ -769,14 +1010,17 @@ bool p_rval_three_prime()
   cout<<"rval_three'"<<endl;
   if(CurTok.type == ASTERIX)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(ASTERIX) & p_rval_two() & p_rval_three_prime();
   }
   else if(CurTok.type == DIV)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(DIV) & p_rval_two() & p_rval_three_prime();
   }
   else if(CurTok.type == MOD)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(MOD) & p_rval_two() & p_rval_three_prime();
   }
   else
@@ -800,13 +1044,15 @@ bool p_rval_four()
 bool p_rval_four_prime()
 {
   cout<<"rval_four'"<<endl;
-  cout<<CurTok.type<<endl;
+  // cout<<CurTok.type<<endl;
   if(CurTok.type == PLUS)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(PLUS) & p_rval_three() & p_rval_four_prime();
   }
   else if(CurTok.type == MINUS)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(MINUS) & p_rval_three() & p_rval_four_prime();
   }
   else
@@ -832,18 +1078,22 @@ bool p_rval_five_prime()
   cout<<"rval_five'"<<endl;
   if(CurTok.type == LE)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(LE) & p_rval_four() & p_rval_five_prime();
   }
   else if(CurTok.type == LT)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(LT) & p_rval_four() & p_rval_five_prime();
   }
   else if(CurTok.type == GE)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(GE) & p_rval_four() & p_rval_five_prime();
   }
   else if(CurTok.type == GT)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(GT) & p_rval_four() & p_rval_five_prime();
   }
   else
@@ -869,10 +1119,12 @@ bool p_rval_six_prime()
   cout<<"rval_six'"<<endl;
   if(CurTok.type == EQ)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(EQ) & p_rval_five() & p_rval_six_prime();
   }
   else if(CurTok.type == NE)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(NE) & p_rval_five() & p_rval_six_prime();
   }
   else
@@ -898,6 +1150,7 @@ bool p_rval_seven_prime()
   cout<<"rval_seven'"<<endl;
   if(CurTok.type == AND)
   {
+        cout<<CurTok.lexeme<<endl;
     return match(AND) & p_rval_six() & p_rval_seven_prime();
   }
   else
@@ -923,6 +1176,7 @@ bool p_rval_eight_prime()
   cout<<"rval_eight'"<<endl;
   if(CurTok.type == OR)
   {
+    cout<<CurTok.lexeme<<endl;
     return match(OR) & p_rval_seven() & p_rval_eight_prime();
   }
   else
@@ -963,7 +1217,17 @@ bool p_return_stmt()
 bool p_expr()
 {
   cout<<"expr"<<endl;
-  return p_exprStart() & p_rval_eight();
+  //return p_exprStart() & p_rval_eight();
+  if(!p_exprStart())
+    return false;
+
+  if(!p_rval_eight())
+    return false;
+
+  //addExpressionToAST()
+  
+  //body.push_back();
+  return true;
 }
 
 bool p_exprStart()
@@ -978,8 +1242,25 @@ bool p_exprStart()
   {
       putBackToken(CurTok);
       CurTok = firstLookAhead;
-      cout<<CurTok.type<<endl;
-      return match(IDENT) & match(ASSIGN) & p_exprStart();
+      //cout<<CurTok.type<<endl;
+
+      variableIdent = CurTok;
+      if(!match(IDENT))
+        return false;
+
+      if(!match(ASSIGN))
+        return false;
+
+      //expression.append(variableIdent.lexeme + "=");
+
+      return p_exprStart();
+
+      //https://en.wikipedia.org/wiki/Operator-precedence_parser
+      //create vector that contains expression
+      //pass it onto new function which parses it and apply precedence when creating AST
+      //checkwith clang -cc1 -ast-dump sampleTests/testOne.c
+
+      //return match(IDENT) & match(ASSIGN) & p_exprStart();
     
   }
   else
@@ -987,6 +1268,7 @@ bool p_exprStart()
     putBackToken(CurTok);
       CurTok = firstLookAhead;
       cout<<CurTok.type<<endl;
+
     if(contains(CurTok.type,FOLLOW_exprStart))
     {
       cout<<"eat"<<endl;
@@ -994,7 +1276,6 @@ bool p_exprStart()
     }
     else
     {
-      cout<<"Nope"<<endl;
       return false;
     }
   }
@@ -1046,6 +1327,7 @@ bool p_expr_stmt()
   }
   else
   {
+    errs()<<"Syntax error: Token "<<CurTok.lexeme<<" invalid. \n";
     return false;
   }
 }
@@ -1083,9 +1365,12 @@ bool p_stmt_list()
 {
   cout<<"stmt_list"<<endl;
    cout<<CurTok.type<<endl;
-  if(contains(CurTok.type, FIRST_stmt))
+  if(contains(CurTok.type, FIRST_stmt_list))
   {
-    return p_stmt() & p_stmt_list();
+    if(!p_stmt())
+      return false;
+    
+    return p_stmt_list();
   }
   else
   {
@@ -1102,7 +1387,29 @@ bool p_stmt_list()
 bool p_local_decl()
 {
   cout<<"local_decl"<<endl;
-  return p_var_type() & match(IDENT) & match(SC);
+  if(!p_var_type())
+  {
+    return false;
+  }
+
+  variableIdent = CurTok;
+  if(!match(IDENT))
+  {
+    return false;
+  }
+
+  if(!match(SC))
+  {
+    return false;
+  }
+
+  unique_ptr<VariableASTnode> var = std::make_unique<VariableASTnode>(variableIdent, vartype, variableIdent.lexeme);
+  body.push_back(std::move(var));
+  resetVariableToken();
+  resetVartype();
+
+  return true;
+  //return p_var_type() & match(IDENT) & match(SC);
 }
 
 bool p_local_decls()
@@ -1110,7 +1417,22 @@ bool p_local_decls()
    cout<<"local_decls"<<endl;
    if(contains(CurTok.type, FIRST_local_decl))
    {
-      return p_local_decl() & p_local_decls();
+      if(!p_local_decl())
+      {
+        return false;
+      }
+
+      //added to body
+
+      // if(!p_local_decls()) //recursive
+      // {
+      //   return false;
+      // }
+      
+
+      return p_local_decls();
+
+      //return p_local_decl() & p_local_decls();
    }
    else
    {
@@ -1127,13 +1449,64 @@ bool p_local_decls()
 bool p_param()
 {
   cout<<"param"<<endl;
-  return p_var_type() & match(IDENT);
+  //return p_var_type() & match(IDENT);
+  if(!p_var_type())
+    return false;
+
+  TOKEN identifier = CurTok;
+  
+  if(!match(IDENT))
+    return false;
+
+  //argument.append(identifier);
+
+  argument = std::make_unique<VariableASTnode>(identifier, vartype, identifier.lexeme);
+  argumentList.push_back(std::move(argument));
+  resetVartype();
+  resetArgument();
+
+  return true;
 }
 
 bool p_block()
 {
   cout<<"block"<<endl;
-  return match(LBRA) & p_local_decls() & p_stmt_list() & match(RBRA);
+
+  if(!match(LBRA))
+  {
+    return false;
+  }
+
+  if(!p_local_decls())
+  {
+    return false;
+  }
+
+  //added to body - need to add more from stmt_list
+
+   if(!p_stmt_list())
+  {
+    return false;
+  }
+
+  if(!match(RBRA))
+  {
+    return false;
+  }
+
+  //define functionAST and add to root
+  prototypeName.append(functiontype + " " + functionIdent.lexeme);
+  resetFunctionIdent();
+  resetFunctiontype();
+  unique_ptr<PrototypeAST> Proto = std::make_unique<PrototypeAST>(prototypeName,std::move(argumentList));
+  resetArgumentList();
+  resetPrototypeName();
+  unique_ptr<FunctionAST> Func = std::make_unique<FunctionAST>(std::move(Proto),std::move(body));
+  resetBody();
+  root.push_back(std::move(Func));
+
+  return true;
+  //return match(LBRA) & p_local_decls() & p_stmt_list() & match(RBRA);
 }
 
 bool p_var_type()
@@ -1141,14 +1514,17 @@ bool p_var_type()
   cout<<"var_type"<<endl;
   if(CurTok.type == INT_TOK)
   {
+    vartype.append("int");
     return match(INT_TOK);
   }
   else if(CurTok.type == FLOAT_TOK)
   {
+    vartype.append("float");
     return match(FLOAT_TOK);
   }
   else if(CurTok.type == BOOL_TOK)
   {
+    vartype.append("bool");
     return match(BOOL_TOK);
   }
   else
@@ -1162,6 +1538,7 @@ bool p_type_spec()
   cout<<"type_spec"<<endl;
   if(CurTok.type == VOID_TOK)
   {
+    prototypeName.append("void");
     return match(VOID_TOK);
   }
   else if(contains(CurTok.type,FIRST_var_type))
@@ -1178,12 +1555,23 @@ bool p_param_list_prime()
 {
   cout<<"param_list'"<<endl;
   if(CurTok.type == COMMA)
-    return match(COMMA) & p_param_list();
+  {
+    
+    if(!match(COMMA))
+      return false;
+
+    if(!p_param_list())
+      return false;
+    
+    return true;
+    //return match(COMMA) & p_param_list();
+  }
   else
   {
-    if(contains(CurTok.type,FOLLOW_param_list_prime))
+    if(contains(CurTok.type,FOLLOW_param_list_prime)) //end of all parameters
     {
       cout<<"eat"<<endl;
+
       return true;
     }
     else
@@ -1206,6 +1594,9 @@ bool p_params()
   }
   else if(CurTok.type == VOID_TOK)
   {
+    argument = std::make_unique<VariableASTnode>(CurTok, "void", "");
+    argumentList.push_back(std::move(argument));
+    //cout<<"size:"<<argumentList.size()<<endl;
     return match(VOID_TOK);
   }
   else //epsilon
@@ -1223,13 +1614,54 @@ bool p_params()
 bool p_decl_prime()
 {
   cout<<"decl'"<<endl;
-  if(CurTok.type == SC)
+  if(CurTok.type == SC) 
   {
-    return match(SC);
+    variableIdent = functionIdent; //not a function
+    vartype = functiontype;
+    resetFunctionIdent();
+    resetFunctiontype();
+
+
+    if(!match(SC))
+      return false;
+
+    argument = std::make_unique<VariableASTnode>(variableIdent,vartype,variableIdent.lexeme);
+    root.push_back(std::move(argument));
+    resetVartype();
+    resetVariableToken();
+    resetArgument();
+
+    return true;
+
   }
   else if(CurTok.type == LPAR)
   {
-    return match(LPAR) & p_params() & match(RPAR) & p_block();
+    if(!match(LPAR))
+    {
+      return false;
+    }
+
+    if(!p_params())
+    {
+      return false;
+    }
+
+    //argument list defined
+
+    if(!match(RPAR))
+    {
+      return false;
+    }
+
+    //variables for function prototype defined
+
+    if(!p_block())
+    {
+      return false;
+    }
+
+    return true;
+    //return match(LPAR) & p_params() & match(RPAR) & p_block();
   }
   else
   {
@@ -1259,7 +1691,60 @@ bool p_extern_list_prime()
 bool p_extern()
 {
   cout<<"extern"<<endl;
-  return match(EXTERN) & p_type_spec() & match(IDENT) & match(LPAR) & p_params() & match(RPAR) & match(SC);
+  //return match(EXTERN) & p_type_spec() & match(IDENT) & match(LPAR) & p_params() & match(RPAR) & match(SC);
+  if(!match(EXTERN))
+  {
+    return false;
+  }
+
+  prototypeName.append("extern ");
+
+  if(!p_type_spec())
+  {
+    return false;
+  }
+
+  prototypeName.append(vartype);
+  resetVartype();
+  
+  string ident = CurTok.lexeme;
+
+  if(!match(IDENT))
+  {
+    return false;
+  }
+
+  prototypeName.append(ident + " ");
+
+  //got function name
+
+  if(!match(LPAR))
+  {
+    return false;
+  }
+
+  if(!p_params())
+  {
+    return false;
+  }
+
+  if(!match(RPAR))
+  {
+    return false;
+  }
+
+   if(!match(SC))
+  {
+    return false;
+  }
+  cout<<"size:"<<argumentList.size()<<endl;
+  unique_ptr<PrototypeAST> Proto = std::make_unique<PrototypeAST>(prototypeName,std::move(argumentList));
+  root.push_back(std::make_unique<FunctionAST>(std::move(Proto),std::move(body)));
+  resetArgumentList();
+  resetPrototypeName();
+
+  return true;
+
 }
 
 bool p_decl_list_prime()
@@ -1287,7 +1772,31 @@ bool p_decl()
   cout<<"decl"<<endl;
   if(contains(CurTok.type,FIRST_var_type))
   {
-    return p_var_type() & match(IDENT) & p_decl_prime();
+    //return p_var_type() & match(IDENT) & p_decl_prime();
+    if(!p_var_type())
+    {
+      return false;
+    }
+    //vartype defined
+    functiontype.append(vartype); //in case of a function decl
+    resetVartype();
+
+    functionIdent = CurTok; //in case of a function decl
+    if(!match(IDENT))
+    {
+      return false;
+    }
+
+    //prototypeName.append(functionIdent.lexeme);
+
+    //functionIdent defined
+
+    if(!p_decl_prime())
+    {
+      return false;
+    }
+
+    return true;
   }
   else if(CurTok.type == VOID_TOK)
   {
@@ -1337,19 +1846,17 @@ bool p_program()
 }
 
 // program ::= extern_list decl_list
-static void parser() {
+static bool parser() {
   // add body
   getNextToken();
-  if(p_program())
+  if(p_program() & (CurTok.type == EOF_TOK))
   {
-    if(CurTok.type == EOF_TOK)
-    {
-      cout<<"Parsing successful"<<endl;
-    }
+    cout<<"Parsing successful"<<endl;
+    return true;
   }
   else
   {
-    cout<<"Parsing failed"<<endl;
+    return false;
   }
 
 }
@@ -1367,8 +1874,8 @@ static std::unique_ptr<Module> TheModule;
 //===----------------------------------------------------------------------===//
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
-                                     const ASTnode &ast) {
-  os << ast.to_string();
+                                     const unique_ptr<ASTnode> &ast) {
+  os << ast->to_string(); //changes made
   return os;
 }
 
@@ -1418,8 +1925,25 @@ int main(int argc, char **argv) {
   //skip EOF
   getNextToken();
   // Run the parser now.
-  parser();
+  if(!parser())
+  {
+    cout<<"Parsing failed"<<endl;
+    return 1;
+  }
   //fprintf(stderr, "Parsing Finished\n");
+
+
+  //Printing out AST
+  llvm::outs() << "Printing out AST:"<< "\n";
+  llvm::outs() << "root"<< "\n";
+  for(int i = 0; i < root.size(); i++)
+  {
+    // if(i == root.size() - 1)
+    //   llvm::outs() << "⮡ " << root[i] << "\n";
+    // else
+      llvm::outs() << " ⮡ " << root[i] << "\n\n";
+
+  }
 
   //********************* Start printing final IR **************************
   // Print out all of the generated code into a file called output.ll

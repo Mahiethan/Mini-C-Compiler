@@ -430,7 +430,7 @@ extern_list ::= extern extern_list'
 
 extern_list' ::= extern_list | epsilon
 
-extern ::= "extern" type_spec IDENT "(" params ")" ";"
+extern ::= "extern" type_spec IDENT "(" params ")" ";"   //creates a function without body
 
 type_spec ::= "void"
              |  var_type
@@ -443,7 +443,7 @@ var_type  ::= "int" |  "float" |  "bool"
 
 decl ::= var_type IDENT decl' | "void" IDENT "(" params ")" block
 
-decl' ::= ";" | "(" params ")" block
+decl' ::= ";" | "(" params ")" block //";" creates variable 
 
 params ::= param_list  
           |  "void" | epsilon
@@ -454,11 +454,11 @@ param_list' ::= "," param_list | epsilon
 
 param ::= var_type IDENT
 
-block ::= "{" local_decls stmt_list "}"
+block ::= "{" local_decls stmt_list "}" //creates function with body
 
 local_decls ::= local_decl local_decls | epsilon
 
-local_decl ::= var_type IDENT ";"
+local_decl ::= var_type IDENT ";" //adds variable
 
 stmt_list ::= stmt stmt_list | epsilon
 
