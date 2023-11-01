@@ -30,4 +30,10 @@ int secondFunc(float m){
     //     result = 7;
     // }
 
+    // result = 10; //this and following not printed out in IR, but does appear in AST
+    if(result == 10)
+    {
+        result = 11;
+    }
+
 }

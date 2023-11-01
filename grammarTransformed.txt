@@ -441,9 +441,9 @@ decl_list' ::= decl_list | epsilon
 
 var_type  ::= "int" |  "float" |  "bool"
 
-decl ::= var_type IDENT decl' | "void" IDENT "(" params ")" block
+decl ::= var_type IDENT decl' | "void" IDENT "(" params ")" block    //creates function with body
 
-decl' ::= ";" | "(" params ")" block //";" creates variable 
+decl' ::= ";" | "(" params ")" block      //";" creates variable, otherwies create function with body
 
 params ::= param_list  
           |  "void" | epsilon
@@ -454,7 +454,7 @@ param_list' ::= "," param_list | epsilon
 
 param ::= var_type IDENT
 
-block ::= "{" local_decls stmt_list "}" //creates function with body
+block ::= "{" local_decls stmt_list "}"
 
 local_decls ::= local_decl local_decls | epsilon
 
@@ -468,43 +468,43 @@ stmt ::= expr_stmt
         |  while_stmt 
         |  return_stmt
 
-expr_stmt ::= expr ";" 
+expr_stmt ::= expr ";" //create expression
              |  ";"
 
-while_stmt ::= "while" "(" expr ")" stmt
+while_stmt ::= "while" "(" expr ")" stmt //create WhileExprASTnode with expression
 
-if_stmt ::= "if" "(" expr ")" block else_stmt
+if_stmt ::= "if" "(" expr ")" block else_stmt //create IfExprASTnode with expression, with or without else
 
-else_stmt  ::= "else" block
-              |  epsilon
+else_stmt  ::= "else" block           //create IfExprASTnode with else
+              |  epsilon             //create IfExprASTnode without else
 
 return_stmt ::= "return" return_stmt' 
 
-return_stmt' ::= ";" | expr ";"
+return_stmt' ::= ";" | expr ";" //create ReturnASTnode
 
-exprStart ::= IDENT "=" exprStart | epsilon
+exprStart ::= IDENT "=" exprStart | epsilon  //precedence = 10
 
 expr ::= exprStart rval_eight
 
 rval_eight ::= rval_seven rval_eight'
 
-rval_eight' ::= "||" rval_seven rval_eight' 
+rval_eight' ::= "||" rval_seven rval_eight'  //precedence = 20
         | epsilon
 
 rval_seven ::= rval_six rval_seven'
 
-rval_seven' ::= "&&" rval_six rval_seven' 
+rval_seven' ::= "&&" rval_six rval_seven'  //precedence = 30
         | epsilon
 
 rval_six ::= rval_five rval_six'
 
-rval_six' ::= "==" rval_five rval_six' 
+rval_six' ::= "==" rval_five rval_six'  //precedence = 40
         | "!=" rval_five rval_six' 
         | epsilon
 
 rval_five ::= rval_four rval_five'
 
-rval_five' ::= "<=" rval_four rval_five'
+rval_five' ::= "<=" rval_four rval_five' //precedence = 50
         | "<" rval_four rval_five'
         | ">=" rval_four rval_five'
         | ">" rval_four rval_five'
@@ -512,18 +512,18 @@ rval_five' ::= "<=" rval_four rval_five'
 
 rval_four ::= rval_three rval_four'
 
-rval_four' ::= "+" rval_three rval_four'
+rval_four' ::= "+" rval_three rval_four' //precedence = 60
         | "-" rval_three rval_four'
         | epsilon
 
 rval_three ::= rval_two rval_three'
 
-rval_three' ::= "*" rval_two rval_three'
+rval_three' ::= "*" rval_two rval_three' //precedence = 70
         | "/" rval_two rval_three'
         | "%" rval_two rval_three'
         | epsilon
 
-rval_two ::= "-" rval_two
+rval_two ::= "-" rval_two 
         | "!" rval_two
         | rval_one
 
