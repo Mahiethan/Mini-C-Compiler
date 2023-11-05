@@ -438,14 +438,30 @@ static void clearTokBuffer() {
 // AST nodes
 //===----------------------------------------------------------------------===//
 static int indentLevel = 0;
-void increaseIndentLevel(){indentLevel++;}
+static int indentAmount = 3;
+static bool cont = true;
+void increaseIndentLevel(){indentLevel = indentLevel + indentAmount;}
 void decreaseIndentLevel(){
-  indentLevel = (indentLevel > 0) ? --indentLevel : indentLevel;
+  indentLevel = (indentLevel > 0) ? indentLevel = indentLevel - indentAmount : indentLevel;
 }
 string addIndent()
 {
   increaseIndentLevel();
-  return std::string(indentLevel,' ');
+  string final = "";
+  if(cont == true)
+    for(int i = 0; i < indentLevel; i++)
+      if(i % 2 == 0)
+        final.append("|");
+      else
+        final.append(" ");
+  else
+    final = std::string(indentLevel,' ');
+  return final;
+}
+
+void resetIndent()
+{
+  indentLevel = 0;
 }
 
 /// ASTnode - Base class for all AST nodes.
@@ -467,8 +483,9 @@ public:
   // virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a string representation of this AST node
+    string final = "IntegerLiteral: " + std::to_string(Val);
     decreaseIndentLevel();
-    return "IntegerLiteral: " + std::to_string(Val);
+    return final;
   };
 };
 
@@ -485,8 +502,9 @@ public:
   // virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a string representation of this AST node
+    string final = "FloatLiteral: " + std::to_string(Val);
     decreaseIndentLevel();
-    return "FloatLiteral: " + std::to_string(Val);
+    return final;
   };
 };
 
@@ -501,9 +519,10 @@ public:
   // virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a string representation of this AST node
-    decreaseIndentLevel();
     string boolVal = Val == true ? "true" : "false";
-    return "BoolLit: " + boolVal;
+    string final =  "BoolLit: " + boolVal;
+    decreaseIndentLevel();
+    return final;
   };
 };
 
@@ -519,8 +538,9 @@ class VariableASTnode : public ASTnode{
   // virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a sting representation of this AST node
+    string final =  "VarDecl: " + Type + " " + Val; 
     decreaseIndentLevel();
-    return "VarDecl: " + Type + " " + Val; 
+    return final;
     // return "a";
   };
 };
@@ -535,8 +555,9 @@ class VariableReferenceASTnode : public ASTnode{
   // virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a sting representation of this AST node
+    string final = "VarRef: " + Name;
     decreaseIndentLevel();
-    return "VarRef: " + Name;
+    return final;
     // return "a";
   };
 };
@@ -553,7 +574,7 @@ public:
   // virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a string representation of this AST node
-    string final =  "UnaryExpr: " + Opcode + "\n    " + addIndent() + " |-> " + Operand->to_string();
+    string final =  "UnaryExpr: " + Opcode  + "\n" + addIndent() + "--> " + Operand->to_string();
     decreaseIndentLevel();
     return final;
   };
@@ -572,7 +593,7 @@ public:
   // virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a string representation of this AST node
-    string final = "BinaryExpr: " + Opcode + "\n    " + addIndent() + " |-> " + LHS->to_string()  +  "\n    " + addIndent() + " |-> " + RHS->to_string();
+    string final = "BinaryExpr: " + Opcode + "\n" + addIndent() + "--> " + LHS->to_string() + "\n" + addIndent() + "--> " + RHS->to_string();
     decreaseIndentLevel();
     return final;
   };
@@ -594,15 +615,15 @@ public:
     string args = "";
     for(int i = 0; i < Args.size(); i++)
     {
-      if(i == Args.size() - 1)
-      args.append(addIndent() + " |-> Param" + Args[i]->to_string());
-      // args.append(" |-> Param" + Args[i]->to_string());
-    else
-      args.append(addIndent() + " |-> Param" + Args[i]->to_string() + "\n    ");
+      // if(i == Args.size() - 1)
+      args.append("\n" + addIndent() + "--> Param" + Args[i]->to_string());
+      // args.append(" -> Param" + Args[i]->to_string());
+    // else
+    //   args.append(addIndent() + " -> Param" + Args[i]->to_string() + "\n");
     }
 
-    if(args.length() != 0)
-      args = "\n    " + args;
+    // if(args.length() != 0)
+    //   args = "\n" + args;
 
     string final = "FunctionCall: " + Callee + args;
     decreaseIndentLevel();
@@ -612,17 +633,46 @@ public:
 
 /// IfExprASTnode - Expression class for if/then/else.
 class IfExprASTnode : public ASTnode {
-  std::unique_ptr<ASTnode> Cond, Then, Else;
+  std::unique_ptr<ASTnode> Cond;
+  std::vector<std::unique_ptr<ASTnode>> Then, Else;
 
 public:
-  IfExprASTnode(std::unique_ptr<ASTnode> Cond, std::unique_ptr<ASTnode> Then,
-            std::unique_ptr<ASTnode> Else)
+  IfExprASTnode(std::unique_ptr<ASTnode> Cond, std::vector<std::unique_ptr<ASTnode>> Then,
+            std::vector<std::unique_ptr<ASTnode>> Else)
       : Cond(std::move(Cond)), Then(std::move(Then)), Else(std::move(Else)) {}
 
    // virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a string representation of this AST node
-    return "if";
+   string ThenStr = "";
+   string ElseStr = "";
+  string final = "IfExpr:\n" + addIndent() + "--> " + Cond->to_string();
+  
+  for(int i = 0; i < Then.size(); i++)
+  {
+    if(Then[i] != nullptr)
+      ThenStr.append("\n" + addIndent() + "--> " + Then[i]->to_string()); //SORT THIS IDENT OUT
+  } 
+  // cout<<"Size of Else:"<<Else.size()<<endl;
+  // cout<<"Size of Then:"<<Then.size()<<endl;
+  final.append(ThenStr);
+  if(Else.size() != 0)
+   {
+      ElseStr = "\n" + addIndent() + "--> ElseExpr:";
+      // decreaseIndentLevel();
+   }
+  for(int j = 0; j < Else.size(); j++)
+  {
+    if(Else[j] != nullptr)
+      ElseStr.append("\n" + addIndent() + "--> " + Else[j]->to_string()); 
+  } 
+  final.append(ElseStr);
+  decreaseIndentLevel(); //one for if
+  if(Else.size() != 0)
+  {
+    decreaseIndentLevel(); //one for else
+  }
+  return final;
   };
 };
 
@@ -631,16 +681,25 @@ public:
 
 /// WhileExprASTnode - Expression class for while/do
 class WhileExprASTnode : public ASTnode {
-  std::unique_ptr<ASTnode> Cond, Then;
+  std::unique_ptr<ASTnode> Cond;
+  std::vector<std::unique_ptr<ASTnode>> Then;
 
 public:
-  WhileExprASTnode(std::unique_ptr<ASTnode> cond, std::unique_ptr<ASTnode> then)
+  WhileExprASTnode(std::unique_ptr<ASTnode> cond, std::vector<std::unique_ptr<ASTnode>> then)
       : Cond(std::move(cond)), Then(std::move(then)) {}
 
   // virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a string representation of this AST node
-    return "while";
+    string ThenStr = "";
+    string final = "WhileExpr:\n" + addIndent() + "--> " + Cond->to_string();
+    for(int i = 0; i < Then.size(); i++)
+    {
+      ThenStr.append("\n" + addIndent() + "--> " + Then[i]->to_string()); //SORT THIS IDENT OUT
+    }
+    final.append(ThenStr);
+    decreaseIndentLevel();
+    return final;
   };
 };
 
@@ -655,7 +714,9 @@ public:
   // virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a string representation of this AST node
-    return "return";
+    string final = "ReturnStmt\n" + addIndent() + "--> " + ReturnExpr->to_string();
+    decreaseIndentLevel();
+    return final;
   };
 };
 
@@ -679,17 +740,24 @@ public:
   string name = getName();
   string args = "";
   //cout<<Args.size()<<endl;
+  // if(Args.size() > 0)
+  // {
+  //   args.append("\n" + addIndent() + "--> Param" + Args[i]->to_string());
+  // }
   for(int i = 0; i < Args.size(); i++)
   {
     //cout<<Args[i]->to_string()<<endl;
-    if(i == Args.size() - 1)
-      args.append("    |-> Param" + Args[i]->to_string());
-    else
-      args.append("   |-> Param" + Args[i]->to_string() + "\n");
-
+    // if(i == Args.size() - 1)
+    //   args.append("\n" + addIndent() + "`-> Param" + Args[i]->to_string());
+    // else
+      args.append("\n" + addIndent() + "--> Param" + Args[i]->to_string());
   }
-  if(args.length() != 0)
-    args = "\n " + args;
+
+//  if(Args.size() > 0)
+//   {
+//     decreaseIndentLevel();
+//   }
+ 
   return name + args;
   };
 };
@@ -710,16 +778,20 @@ public:
     virtual std::string to_string() const override{
   //return a sting representation of this AST node
       string proto = Proto->to_string();
+      string final =  "FunctionDecl: " + proto;
       string body = "";
       if(Body.size() != 0)
-        body = "\n    " + addIndent() + "|-> Function Body:";
+      {
+        body = "\n" + addIndent() + "--> Function Body:";
+        // decreaseIndentLevel();
+      }
       for(int i = 0; i < Body.size(); i++)
       {
-        body.append("\n    " +  addIndent() + "|-> " + Body[i]->to_string());
+        body.append("\n" + addIndent() + "--> " + Body[i]->to_string());
       }
 
-      string final =  "FunctionDecl: " + proto + body;
-      indentLevel = 0;
+      final.append(body);
+      resetIndent();
       return final;
   };
 };
@@ -731,13 +803,17 @@ static vector<unique_ptr<ASTnode>> root; //root of the AST (TranslationUnitDecl)
 //null TOKEN
 TOKEN nullToken = {};
 
+//these are used to enclose unary expressions so proper precedence can be applied to them
+TOKEN insertLPAR = {LPAR,"(",0,0};
+TOKEN insertRPAR = {RPAR,")",0,0};
+
 static string prototypeName = "";
 static unique_ptr<VariableASTnode> argument = std::make_unique<VariableASTnode>(CurTok,"","");
 static string vartype = "";
 static string functiontype = "";
 static vector<unique_ptr<VariableASTnode>> argumentList = {};
 static vector<unique_ptr<ASTnode>> body = {};
-static vector<unique_ptr<ASTnode>> block = {};
+static deque<pair<string,unique_ptr<ASTnode>>> stmtList;
 static TOKEN functionIdent = nullToken;
 static TOKEN variableIdent = nullToken;
 //static vector<string> varNames = {}; //can have more than one variable names IDENT = IDENT = ...
@@ -787,9 +863,9 @@ void resetBody()
   body.clear();
 }
 
-void resetBlock()
+void resetStmtList()
 {
-  body.clear();
+  stmtList.clear();
 }
 
 void resetFunctionIdent()
@@ -812,12 +888,6 @@ void resetUnaryExpr()
   unary = "";
 }
 
-// void printExpression()
-// {
-//   for(int i = 0; i < expression.size(); i++)
-//     cout<<expression[i];
-//   cout<<"\n";
-// }
 
 
 
@@ -1017,6 +1087,91 @@ void addFunctionAST()
   root.push_back(std::move(Func));
 }
 
+void printStmtList()
+{
+  for(int i = 0; i < stmtList.size(); i++)
+  {
+    cout<<stmtList.at(i).first<<endl;
+  }
+}
+
+unique_ptr<ASTnode> processStmtList()
+{
+  auto curr = std::move(stmtList.front());
+  stmtList.pop_front();
+  cout<<"Curr: "<<curr.first<<"size "<<stmtList.size()<<endl;
+  if((curr.first == "new" | curr.first == "else") & (stmtList.size() > 1)) //ignore "new" and "else"
+  {
+    // cout<<"Discard: "<<curr.first<<endl;
+    curr = std::move(stmtList.front());
+    // cout<<"NewCurr: "<<curr.first<<endl;
+    stmtList.pop_front();
+  }
+  // cout<<"FinalCurr: "<<curr.first<<endl;
+  if(curr.first == "vardecl")
+  {
+    return std::move(curr.second);
+  }
+  else if(curr.first == "expr")
+  {
+    return std::move(curr.second);
+  }
+  else if(curr.first == "while")
+  {
+    unique_ptr<ASTnode> cond = processStmtList();
+    vector<unique_ptr<ASTnode>> then = {};
+    while(stmtList.front().first != "new")
+    {
+      then.push_back(std::move(processStmtList()));
+    }
+    cout<<"exit while"<<endl;
+    return make_unique<WhileExprASTnode>(std::move(cond),std::move(then));
+  }
+  else if(curr.first == "if")
+  {
+    unique_ptr<ASTnode> cond = processStmtList();
+    vector<unique_ptr<ASTnode>> Then = {};
+    vector<unique_ptr<ASTnode>> Else = {};
+    while((stmtList.front().first != "new") & (stmtList.front().first != "else"))
+    {
+      Then.push_back(std::move(processStmtList()));
+    }
+    cout<<"exit then"<<endl;
+    if(stmtList.front().first == "else")
+    {
+      while((stmtList.front().first != "new"))
+      {
+        cout<<stmtList.front().first<<endl;
+        Else.push_back(std::move(processStmtList()));
+        //cout<<Else.size()<<endl;
+      }
+      cout<<"exit else"<<endl;
+    }    
+
+    return make_unique<IfExprASTnode>(std::move(cond),std::move(Then),std::move(Else));
+  }
+  else if(curr.first == "return")
+  {
+    // return std::move(curr.second);
+    unique_ptr<ASTnode> returnExpr = processStmtList();
+    return make_unique<ReturnExprASTnode>(std::move(returnExpr));
+  }
+  else return std::move(nullptr);
+} 
+
+void addToBody()
+{
+  while(stmtList.size() != 0)
+  {
+        printStmtList();
+
+    unique_ptr<ASTnode> ptr = std::move(processStmtList());
+    if(ptr != nullptr)
+      body.push_back(std::move(ptr));
+    cout<<stmtList.size()<<endl;
+  }
+}
+
 //static int expr_index = 0;
 
 
@@ -1048,6 +1203,98 @@ int getPrecedence(string op)
     return 110; //invalid
 }
 
+bool isMatchingLastParam(vector<TOKEN> expression)
+{
+  int buf = 0;
+  for(int i = 1; i < expression.size(); i++)
+  {
+    if(expression.at(i).type == RPAR && buf == 0)
+    {
+      cout<<i<<"compared to"<<expression.size()-1<<endl;
+        cout<<"ofund"<<endl;
+      if(i == expression.size() - 1)
+      {
+        cout<<"Yes mate"<<endl;
+        return true;
+      }
+      else
+      {
+        cout<<"Nah mate"<<endl;
+        return false;
+      }
+    }
+    else if(expression.at(i).type == RPAR && buf > 0)
+    {
+      buf--;
+    }
+    else if(expression.at(i).type == LPAR)
+    {
+      buf++;
+    }
+
+    
+  }
+  cout<<"nope"<<endl;
+  return false;
+}
+
+void checkForUnary() //adds parentheses over unary expressions to assert correct precedence
+{
+  bool isOp = false;
+  int valid = 0;
+  bool unaryEnd = true;
+  for(auto i = 0; i < expression.size(); i++)
+  {
+    TOKEN curr = expression.at(i);
+    if(curr.lexeme == "(") 
+    {
+      valid++;
+    }
+    if(curr.lexeme == ")")
+    {
+      valid--;
+    }
+    if(getPrecedence(curr.lexeme) != 110) //operator found
+    {
+      if(isOp == true & unaryEnd == true & valid == 0)
+      {
+        auto itPos = expression.begin() + i;
+        expression.insert(itPos,insertLPAR);
+        cout<<expression.at(i).lexeme<<endl;
+        if(i != expression.size()-1)
+          i++;
+        unaryEnd = false;
+      }
+      if(isOp == false & unaryEnd == false & valid == 0)
+      {
+        auto itPos = expression.begin() + i;
+        expression.insert(itPos,insertRPAR);
+        i++;
+        unaryEnd = true;
+      }
+      isOp = true;
+    }
+    else
+    {
+      isOp = false;
+    }
+    if(i == expression.size()-1 & unaryEnd == false)
+    {
+      auto itPos = expression.begin() + i;
+      expression.insert(itPos,insertRPAR);
+      unaryEnd = true;
+    }
+  }
+}
+
+void printExpression(vector<TOKEN> exp)
+{
+  for(int i = 0; i < exp.size(); i++)
+  {
+    cout<<exp.at(i).lexeme<<endl;
+  }
+}
+
 unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
 {
   if(expression.size() == 1) //literals
@@ -1077,7 +1324,7 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
       return std::move(nullptr);
     }
   }
-  else if((expression.at(0).lexeme == "-" | expression.at(0).lexeme == "!")) //unary
+  else if((expression.at(0).lexeme == "-" | expression.at(0).lexeme == "!") & (expression.at(1).lexeme == "-" | expression.at(1).lexeme == "!" | expression.at(1).lexeme == "(" | expression.size() == 2)) //unary
   {
     cout<<"unary"<<endl;
     string opcode = expression.at(0).lexeme;
@@ -1087,7 +1334,7 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
 
     return std::move(make_unique<UnaryExprASTnode>(opcode,std::move(createExprASTnode(operand))));
   }
-  else if(expression.at(0).lexeme == "(" & expression.at(expression.size()-1).lexeme == ")") //bracketed expr
+  else if((expression.at(0).lexeme == "(") & (isMatchingLastParam(expression) == true)) //bracketed expr - start to end e.g (a + d + (a+f)) not (a+f)+(-e+d)
   {
     cout<<"bracketed expr"<<endl;
     vector<TOKEN> newExpr = {};
@@ -1148,21 +1395,41 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
     string op = "";
     int index = 0;
     bool isOp = false;
-    bool valid = true; //operators inside bracketed expressions are invalid
+    bool unaryEnd = true;
+    int valid = 0; //operators inside bracketed expressions are invalid
     for(int i = 0; i < expression.size(); i++)
     {
       int currPrecedence = getPrecedence(expression.at(i).lexeme);
       if(expression.at(i).lexeme == "(") 
       {
-        valid = false;
+        valid++;
       }
       if(expression.at(i).lexeme == ")")
       {
-        valid = true;
+        valid--;
       }
       if(currPrecedence != 110) //operator found
       {
-        if((currPrecedence <= minPrecedence) & (isOp == false) & (valid == true)) //get lowest precedence operator, avoiding any unary operators
+        // if(isOp == true & unaryEnd == true & valid == 0)
+        // {
+        //   auto itPos = expression.begin() + i;
+        //   expression.insert(itPos,insertLPAR);
+        //   cout<<expression.at(i).lexeme<<endl;
+        //   if(i != expression.size()-1)
+        //     i++;
+        //   unaryEnd = false;
+        // }
+
+        // if(isOp == false & unaryEnd == false & valid == 0)
+        // {
+        //   auto itPos = expression.begin() + i;
+        //   expression.insert(itPos,insertRPAR);
+        //   if(i != expression.size()-1)
+        //     i++;
+        //   unaryEnd = true;
+        // }
+
+        if((currPrecedence <= minPrecedence) & (isOp == false) & (valid == 0)) //get lowest precedence operator, avoiding any unary operators
         { 
           op = expression.at(i).lexeme;
           // cout<<op<<endl;
@@ -1176,6 +1443,12 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
       {
         isOp = false;
       }
+      // if(i == expression.size()-1 & unaryEnd == false)
+      // {
+      //   auto itPos = expression.begin() + i;
+      //   expression.insert(itPos,insertRPAR);
+      //   unaryEnd = true;
+      // }
       
     }
 
@@ -1191,6 +1464,8 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
     }
 
     cout<<op<<endl;
+    cout<<"printing"<<endl;
+    printExpression(expression);
     return std::move(make_unique<BinaryExprASTnode>(op, std::move(createExprASTnode(lhs)), std::move(createExprASTnode(rhs)))); //recursive
   }
   return nullptr; //error
@@ -1678,6 +1953,12 @@ bool p_return_stmt_prime()
     if(!p_expr())
       return false;
     
+    // //checkForUnary();
+    cout<<"Printing"<<endl;
+    //printExpression();
+    unique_ptr<ASTnode> expr = createExprASTnode(expression);
+    pair <string,unique_ptr<ASTnode>> p = make_pair("expr",std::move(expr));
+    stmtList.push_back(std::move(p));
     resetExpression();
 
     return match(SC);
@@ -1691,7 +1972,14 @@ bool p_return_stmt_prime()
 bool p_return_stmt()
 {
   cout<<"return_stmt"<<endl;
-  return match(RETURN) & p_return_stmt_prime();
+  //return match(RETURN) & p_return_stmt_prime();
+  if(!match(RETURN))
+    return false;
+  
+  pair <string,unique_ptr<ASTnode>> p = make_pair("return",std::move(nullptr));
+  stmtList.push_back(std::move(p));
+
+  return p_return_stmt_prime();
 }
 
 bool p_expr()
@@ -1705,7 +1993,7 @@ bool p_expr()
     return false;
 
   //print out expression
-  // printExpression();
+  // //printExpression();
 
   //addExpressionToAST()
 
@@ -1772,10 +2060,17 @@ bool p_else_stmt()
   cout<<"else_stmt"<<endl;
   if(CurTok.type == ELSE)
   {
-    return match(ELSE) & p_block();
-    // if(!match(ELSE))
-    //   return false;
+    // return match(ELSE) & p_block();
+    if(!match(ELSE))
+      return false;
+
+    pair <string,unique_ptr<ASTnode>> p = make_pair("else",std::move(nullptr));
+    stmtList.push_back(std::move(p));
     
+    if(!p_block())
+      return false;
+
+    return true;
 
   }
   else
@@ -1800,6 +2095,14 @@ bool p_if_stmt()
   if(!(match(IF) & match(LPAR) & p_expr() & match(RPAR)))
     return false;
   
+  pair <string,unique_ptr<ASTnode>> p = make_pair("if",std::move(nullptr));
+  stmtList.push_back(std::move(p));
+  //checkForUnary();
+   cout<<"Printing"<<endl;
+    //printExpression();
+  unique_ptr<ASTnode> expr = createExprASTnode(expression);
+  pair <string,unique_ptr<ASTnode>> e = make_pair("expr",std::move(expr));
+  stmtList.push_back(std::move(e));
   resetExpression();
 
   if(!p_block())
@@ -1807,6 +2110,9 @@ bool p_if_stmt()
   
   if(!p_else_stmt())
     return false;
+  
+  pair <string,unique_ptr<ASTnode>> n = make_pair("new",std::move(nullptr));
+  stmtList.push_back(std::move(n));
 
   return true;
 }
@@ -1814,11 +2120,26 @@ bool p_if_stmt()
 bool p_while_stmt()
 {
   // return match(WHILE) & match(LPAR) & p_expr() & match(RPAR) & p_stmt();
-  if(match(WHILE) & match(LPAR) & p_expr() & match(RPAR) == false)
+  if((match(WHILE) & match(LPAR) & p_expr() & match(RPAR)) == false)
     return false;
   
+  pair <string,unique_ptr<ASTnode>> p = make_pair("while",std::move(nullptr));
+  stmtList.push_back(std::move(p));
+  //checkForUnary();
+   cout<<"Printing"<<endl;
+    //printExpression();
+  unique_ptr<ASTnode> expr = createExprASTnode(expression);
+  pair <string,unique_ptr<ASTnode>> e = make_pair("expr",std::move(expr));
+  stmtList.push_back(std::move(e));
   resetExpression();
-  return p_stmt();
+
+
+  if(!p_stmt())
+    return false;
+  
+  pair <string,unique_ptr<ASTnode>> n = make_pair("new",std::move(nullptr));
+  stmtList.push_back(std::move(n));
+  return true;
 
 }
 
@@ -1831,10 +2152,14 @@ bool p_expr_stmt()
       return false;
     if(!match(SC))
       return false;
-    // printExpression();
+    // //printExpression();
 
+    //checkForUnary();
+     cout<<"Printing"<<endl;
+    //printExpression();
     unique_ptr<ASTnode> expr = createExprASTnode(expression);
-    body.push_back(std::move(expr));
+    pair <string,unique_ptr<ASTnode>> p = make_pair("expr",std::move(expr));
+    stmtList.push_back(std::move(p));
     resetExpression();
 
     return true;
@@ -1922,7 +2247,8 @@ bool p_local_decl()
   }
 
   unique_ptr<VariableASTnode> var = std::make_unique<VariableASTnode>(variableIdent, vartype, variableIdent.lexeme);
-  body.push_back(std::move(var));
+  pair <string,unique_ptr<ASTnode>> p = make_pair("vardecl",std::move(var));
+  stmtList.push_back(std::move(p));
   resetVariableToken();
   resetVartype();
 
@@ -2170,6 +2496,9 @@ bool p_decl_prime()
     {
       return false;
     }
+    // printStmtList();
+    addToBody();
+    resetStmtList();
     addFunctionAST(); 
     return true;
     //return match(LPAR) & p_params() & match(RPAR) & p_block();
@@ -2348,6 +2677,9 @@ bool p_decl()
     {
       return false;
     }
+    // printStmtList();
+    addToBody();
+    resetStmtList();
     addFunctionAST(); 
     return true;
   }
@@ -2483,14 +2815,14 @@ int main(int argc, char **argv) {
 
 
   //Printing out AST
-  llvm::outs() << "\nPrinting out AST:"<< "\n";
-  llvm::outs() << "root"<< "\n";
+  llvm::outs() << "\nPrinting out AST:"<< "\n\n";
+  llvm::outs() << "root"<< "\n|\n";
   for(int i = 0; i < root.size(); i++)
   {
-    // if(i == root.size() - 1)
-    //   llvm::outs() << " |-> " << root[i] << "\n";
-    // else
-      llvm::outs() << "  |-> " << root[i] << "\n\n";
+    if(i == root.size() - 1)
+      llvm::outs() << "|-> " << root[i] << "\n";
+    else
+      llvm::outs() << "|-> " << root[i]<< "\n|\n";
       // llvm::outs() << "  |-> " << root[i] << "\n";
   }
 

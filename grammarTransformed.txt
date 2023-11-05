@@ -443,7 +443,7 @@ var_type  ::= "int" |  "float" |  "bool"
 
 decl ::= var_type IDENT decl' | "void" IDENT "(" params ")" block    //creates function with body
 
-decl' ::= ";" | "(" params ")" block      //";" creates variable, otherwies create function with body
+decl' ::= ";" | "(" params ")" block      //";" creates variable, otherwise create function with body
 
 params ::= param_list  
           |  "void" | epsilon
@@ -460,7 +460,7 @@ local_decls ::= local_decl local_decls | epsilon
 
 local_decl ::= var_type IDENT ";" //adds variable
 
-stmt_list ::= stmt stmt_list | epsilon
+stmt_list ::= stmt stmt_list | epsilon      //at the end of stmt, process stmtList and add to body
 
 stmt ::= expr_stmt 
         |  block 
@@ -471,12 +471,12 @@ stmt ::= expr_stmt
 expr_stmt ::= expr ";" //create expression
              |  ";"
 
-while_stmt ::= "while" "(" expr ")" stmt //create WhileExprASTnode with expression
+while_stmt ::= "while" "(" expr ")" stmt //add ("new",nullptr) at the end
 
-if_stmt ::= "if" "(" expr ")" block else_stmt //create IfExprASTnode with expression, with or without else
+if_stmt ::= "if" "(" expr ")" block else_stmt //add ("new",nullptr) at the end
 
-else_stmt  ::= "else" block           //create IfExprASTnode with else
-              |  epsilon             //create IfExprASTnode without else
+else_stmt  ::= "else" block           //add ("else",nullptr) after "else"
+              |  epsilon            
 
 return_stmt ::= "return" return_stmt' 
 

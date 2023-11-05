@@ -13,6 +13,7 @@ void test()
 }
 // a = 2 == true + 5.0 + 4.5 * 19;
 // bool a = True | True;
+int a;
 int another()
 {
     float b;
@@ -26,7 +27,16 @@ int another()
 
     //acts as && for while loop conditions
     while(b==2) 
-    while(c==1) 
+    {
+        int a;
+        a = 1;
+        if(4)
+        {
+
+        }
+        // v = 3;
+    }
+    while(c==1)
     while(d==2)
     {
         //cant have multiple if stmts like this
