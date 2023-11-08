@@ -127,7 +127,7 @@ void qr(int a, int b)
         a = 1;
         if(a == 1)
         {
-            while(a == !2)
+            while(a == func())
             {
                 
             }
@@ -138,4 +138,7 @@ void qr(int a, int b)
 void asd(int test)
 {
     //return test;
+    // func( a,  b);
+    return;
+    fun();
 }

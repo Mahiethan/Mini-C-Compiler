@@ -478,7 +478,7 @@ if_stmt ::= "if" "(" expr ")" block else_stmt //add ("new",nullptr) at the end
 else_stmt  ::= "else" block           //add ("else",nullptr) after "else"
               |  epsilon            
 
-return_stmt ::= "return" return_stmt' 
+return_stmt ::= "return" return_stmt' //add ("new",nullptr) at the end
 
 return_stmt' ::= ";" | expr ";" //create ReturnASTnode
 

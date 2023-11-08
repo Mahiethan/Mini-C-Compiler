@@ -714,8 +714,13 @@ public:
   // virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a string representation of this AST node
-    string final = "ReturnStmt\n" + addIndent() + "--> " + ReturnExpr->to_string();
-    decreaseIndentLevel();
+    string returnExpr = "";
+    string final = "";
+    if(ReturnExpr != nullptr)
+      final = "ReturnStmt\n" + addIndent() + "--> " + ReturnExpr->to_string();
+    else
+       final = "ReturnStmt: empty" ;
+    
     return final;
   };
 };
@@ -1100,7 +1105,7 @@ unique_ptr<ASTnode> processStmtList()
   auto curr = std::move(stmtList.front());
   stmtList.pop_front();
   cout<<"Curr: "<<curr.first<<"size "<<stmtList.size()<<endl;
-  if((curr.first == "new" | curr.first == "else") & (stmtList.size() > 1)) //ignore "new" and "else"
+  if((curr.first == "new" | curr.first == "else") & (stmtList.size() >= 1)) //ignore "new" and "else"
   {
     // cout<<"Discard: "<<curr.first<<endl;
     curr = std::move(stmtList.front());
@@ -1356,6 +1361,8 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
       vector<unique_ptr<ASTnode>> args = {};
       vector<TOKEN> expr = {};
       bool start = false;
+      if(expression.at(2).type != RPAR) //if function call has arguments
+      {
       for(int i = 2; i < expression.size(); i++) //ignoring first LPAR and last RPAR
       {
         if(i==2)
@@ -1381,6 +1388,7 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
             cout<<expression.at(i).lexeme<<endl;
           }
         }
+      }
       }
       return std::move(make_unique<FuncCallASTnode>(callee,std::move(args)));
     // }
@@ -1979,7 +1987,13 @@ bool p_return_stmt()
   pair <string,unique_ptr<ASTnode>> p = make_pair("return",std::move(nullptr));
   stmtList.push_back(std::move(p));
 
-  return p_return_stmt_prime();
+   if(!p_return_stmt_prime())
+    return false;
+  
+  pair <string,unique_ptr<ASTnode>> n = make_pair("new",std::move(nullptr));
+  stmtList.push_back(std::move(n));
+
+  return true;
 }
 
 bool p_expr()
