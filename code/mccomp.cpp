@@ -468,7 +468,7 @@ void resetIndent()
 class ASTnode {
 public:
   virtual ~ASTnode() {}
-  //virtual Value *codegen() = 0;
+  virtual Value *codegen() = 0;
   virtual std::string to_string() const {return "";};
 };
 
@@ -480,7 +480,7 @@ class IntASTnode : public ASTnode {
 
 public:
   IntASTnode(TOKEN tok, int val) : Val(val), Tok(tok) {}
-  // virtual Value *codegen() override;
+  virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a string representation of this AST node
     string final = "IntegerLiteral: " + std::to_string(Val);
@@ -499,7 +499,7 @@ class FloatASTnode : public ASTnode {
 
 public:
   FloatASTnode(TOKEN tok, float val) : Val(val), Tok(tok) {}
-  // virtual Value *codegen() override;
+  virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a string representation of this AST node
     string final = "FloatLiteral: " + std::to_string(Val);
@@ -508,7 +508,7 @@ public:
   };
 };
 
-/// FloatASTnode - Class for float literals like 1.0, 2.5, 10.23,
+/// BoolASTnode - Class for boolean values: true, false
 class BoolASTnode : public ASTnode {
   bool Val;
   TOKEN Tok;
@@ -516,7 +516,7 @@ class BoolASTnode : public ASTnode {
 
 public:
   BoolASTnode(TOKEN tok, bool val) : Val(val), Tok(tok) {}
-  // virtual Value *codegen() override;
+  virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a string representation of this AST node
     string boolVal = Val == true ? "true" : "false";
@@ -527,7 +527,7 @@ public:
 };
 
 
-/// VariableASTnode - Class for referencing variables, such as "a"
+/// VariableASTnode - Class for declaring variables, such as "a"
 class VariableASTnode : public ASTnode{
   TOKEN Tok;
   string Val;
@@ -535,7 +535,8 @@ class VariableASTnode : public ASTnode{
 
   public:
   VariableASTnode(TOKEN tok, string type, string val) : Type(type), Val(val), Tok(tok) {}
-  // virtual Value *codegen() override;
+  virtual Value *codegen() override;
+  // virtual AllocaInst *codegen() override;
   virtual std::string to_string() const override {
   //return a sting representation of this AST node
     string final =  "VarDecl: " + Type + " " + Val; 
@@ -545,20 +546,19 @@ class VariableASTnode : public ASTnode{
   };
 };
 
-/// VariableASTnode - Class for referenced variables
+/// VariableReferenceASTnode - Class for referenced variables
 class VariableReferenceASTnode : public ASTnode{
   TOKEN Tok;
   string Name;
 
   public:
   VariableReferenceASTnode(TOKEN tok, string name) : Name(name), Tok(tok) {}
-  // virtual Value *codegen() override;
+  virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a sting representation of this AST node
     string final = "VarRef: " + Name;
     decreaseIndentLevel();
     return final;
-    // return "a";
   };
 };
 
@@ -571,7 +571,7 @@ public:
   UnaryExprASTnode(string Opcode, std::unique_ptr<ASTnode> Operand)
       : Opcode(Opcode), Operand(std::move(Operand)) {}
 
-  // virtual Value *codegen() override;
+  virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a string representation of this AST node
     string final =  "UnaryExpr: " + Opcode  + "\n" + addIndent() + "--> " + Operand->to_string();
@@ -590,7 +590,7 @@ public:
                 std::unique_ptr<ASTnode> RHS)
       : Opcode(Opcode), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
 
-  // virtual Value *codegen() override;
+  virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a string representation of this AST node
     string final = "BinaryExpr: " + Opcode + "\n" + addIndent() + "--> " + LHS->to_string() + "\n" + addIndent() + "--> " + RHS->to_string();
@@ -609,7 +609,7 @@ public:
               std::vector<std::unique_ptr<ASTnode>> Args)
       : Callee(Callee), Args(std::move(Args)) {}
 
-  // virtual Value *codegen() override;
+  virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a string representation of this AST node
     string args = "";
@@ -641,7 +641,7 @@ public:
             std::vector<std::unique_ptr<ASTnode>> Else)
       : Cond(std::move(Cond)), Then(std::move(Then)), Else(std::move(Else)) {}
 
-   // virtual Value *codegen() override;
+  virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a string representation of this AST node
    string ThenStr = "";
@@ -688,7 +688,7 @@ public:
   WhileExprASTnode(std::unique_ptr<ASTnode> cond, std::vector<std::unique_ptr<ASTnode>> then)
       : Cond(std::move(cond)), Then(std::move(then)) {}
 
-  // virtual Value *codegen() override;
+  virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a string representation of this AST node
     string ThenStr = "";
@@ -711,7 +711,7 @@ public:
   ReturnExprASTnode(std::unique_ptr<ASTnode> returnExpr)
       : ReturnExpr(std::move(returnExpr)) {}
 
-  // virtual Value *codegen() override;
+  virtual Value *codegen() override;
   virtual std::string to_string() const override {
   //return a string representation of this AST node
     string returnExpr = "";
@@ -740,6 +740,8 @@ public:
    const std::string &getName() const { return Name; }
 
   // virtual Value *codegen() override;
+  virtual Function *codegen() override;
+
   virtual std::string to_string() const override {
   //return a sting representation of this AST node
   string name = getName();
@@ -780,6 +782,8 @@ public:
     
 
     // virtual Value *codegen() override;
+    virtual Function *codegen() override;
+
     virtual std::string to_string() const override{
   //return a sting representation of this AST node
       string proto = Proto->to_string();
@@ -803,7 +807,7 @@ public:
 
 static vector<unique_ptr<ASTnode>> root; //root of the AST (TranslationUnitDecl)
 
-//temporary vector/string stores
+///temporary vector/string stores
 
 //null TOKEN
 TOKEN nullToken = {};
@@ -2764,6 +2768,84 @@ static LLVMContext TheContext;
 static IRBuilder<> Builder(TheContext);
 static std::unique_ptr<Module> TheModule;
 
+static std::map<std::string, AllocaInst*> NamedValues;
+
+static AllocaInst* CreateEntryBlockAlloca(Function *TheFunction, const std::string &VarName) {
+  IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
+  TheFunction->getEntryBlock().begin());
+  return TmpB.CreateAlloca(Type::getInt32Ty(TheContext), 0, VarName.c_str()); //the type (first argument) can be changed (for now its Int32)
+}
+
+Value *IntASTnode::codegen() {
+  return ConstantInt::get(TheContext, APInt(32,Val,true));
+}
+
+Value *FloatASTnode::codegen() {
+  return ConstantFP::get(TheContext, APFloat(Val));
+}
+
+Value *BoolASTnode::codegen() {
+  if(Val == true)
+    return ConstantInt::getTrue(TheContext);
+  else
+    return ConstantInt::getFalse(TheContext);
+}
+
+Value *VariableASTnode::codegen() {
+// AllocaInst *VariableASTnode::codegen() {
+  Function *TheFunction = Builder.GetInsertBlock()->getParent();
+  AllocaInst* varAlloca = CreateEntryBlockAlloca(TheFunction, Val);
+  //store in NamedValues
+  NamedValues.insert({Val,varAlloca});
+  Value* var = Builder.CreateLoad(Type::getInt32Ty(TheContext), varAlloca, Val);
+  return var;
+}
+
+Value *VariableReferenceASTnode::codegen() {
+  // Look this variable up in the function.
+  AllocaInst *V = NamedValues[Name];
+  if (!V)
+  {
+    cout<<"Unknown variable name"<<endl;
+    return nullptr;
+  }
+  //load Value from allocaInst in NamedValues
+  return Builder.CreateLoad(Type::getInt32Ty(TheContext), V, Name);
+  //return V;
+}
+
+Value* UnaryExprASTnode::codegen(){
+  return nullptr;
+}
+
+Value* BinaryExprASTnode::codegen(){
+  return nullptr;
+}
+
+Value* FuncCallASTnode::codegen(){
+  return nullptr;
+}
+
+Value* IfExprASTnode::codegen(){
+  return nullptr;
+}
+
+Value* WhileExprASTnode::codegen(){
+  return nullptr;
+}
+
+Value* ReturnExprASTnode::codegen(){
+  return nullptr;
+}
+
+Function* PrototypeAST::codegen(){
+  return nullptr;
+}
+
+Function* FunctionAST::codegen(){
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // AST Printer
 //===----------------------------------------------------------------------===//
@@ -2834,9 +2916,13 @@ int main(int argc, char **argv) {
   for(int i = 0; i < root.size(); i++)
   {
     if(i == root.size() - 1)
+    {
       llvm::outs() << "|-> " << root[i] << "\n";
+    }
     else
+    {
       llvm::outs() << "|-> " << root[i]<< "\n|\n";
+    }
       // llvm::outs() << "  |-> " << root[i] << "\n";
   }
 
