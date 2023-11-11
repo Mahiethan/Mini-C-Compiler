@@ -14,5 +14,5 @@ New additions:
 - Lexer now checks for -,+,% and * and gives it correct token types, instead of passing it through as ascii values
 - Lexer now checks for invalid symbols - passes it on as invalid tokens
     - These invalid tokens are detected by the lexical analyser 
-- Root node is a list of FunctionAST nodes as children (not an ASTnode)
-    - This causes a change in the AST printer (line 1619)
+- Root node is a list of TopLevelASTnodes as children (not an ASTnode)
+    - This causes a change in the AST printer (line 3674)

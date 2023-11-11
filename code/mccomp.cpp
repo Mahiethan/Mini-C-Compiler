@@ -464,7 +464,7 @@ void resetIndent()
   indentLevel = 0;
 }
 
-/// ASTnode - Base class for all AST nodes.
+/// ASTnode - Base class for all AST child nodes.
 class ASTnode {
 public:
   virtual ~ASTnode() {}
@@ -733,10 +733,45 @@ public:
   };
 };
 
+class TopLevelASTnode {
+public:
+  virtual ~TopLevelASTnode() {}
+  virtual Value *codegen() = 0;
+  virtual std::string to_string() const {return "";};
+};
+
+//GlobalVariableAST - This class represents global variable declarations
+class GlobalVariableAST : public TopLevelASTnode {
+  TOKEN Tok;
+  string Val;
+  string Ty;
+
+  public:
+  GlobalVariableAST(TOKEN tok, string type, string val) : Ty(type), Val(val), Tok(tok) {}
+  string getVal()
+  {
+    return Val;
+  }
+  string getType()
+  {
+    return Ty;
+  }
+  virtual Value *codegen() override;
+  // virtual AllocaInst *codegen() override;
+  virtual std::string to_string() const override {
+  //return a sting representation of this AST node
+    string final =  "GlobalVarDecl: " + Ty + " " + Val; 
+    decreaseIndentLevel();
+    return final;
+    // return "a";
+  };
+};
+
+
 /// PrototypeAST - This class represents the "prototype" for a function,
 /// which captures its name, and its argument names (thus implicitly the number
 /// of arguments the function takes).
-class PrototypeAST : public ASTnode {
+class PrototypeAST : public TopLevelASTnode {
   // string returnType;
   std::string Name;
   std::vector<unique_ptr<VariableASTnode>> Args;
@@ -778,12 +813,12 @@ public:
 //     decreaseIndentLevel();
 //   }
  
-  return name + args;
+  return "FunctionDecl: " + name + args;
   };
 };
 
 /// FunctionAST - This class represents a function definition itself.
-class FunctionAST : public ASTnode {
+class FunctionAST : public TopLevelASTnode {
   std::unique_ptr<PrototypeAST> Proto;
   std::vector<std::unique_ptr<ASTnode>> Body;
 
@@ -800,7 +835,7 @@ public:
     virtual std::string to_string() const override{
   //return a sting representation of this AST node
       string proto = Proto->to_string();
-      string final =  "FunctionDecl: " + proto;
+      string final =  proto;
       string body = "";
       if(Body.size() != 0)
       {
@@ -818,7 +853,7 @@ public:
   };
 };
 
-static vector<unique_ptr<ASTnode>> root; //root of the AST (TranslationUnitDecl)
+static vector<unique_ptr<TopLevelASTnode>> root; //root of the AST (TranslationUnitDecl)
 
 ///temporary vector/string stores
 
@@ -831,6 +866,7 @@ TOKEN insertRPAR = {RPAR,")",0,0};
 
 static string prototypeName = "";
 static unique_ptr<VariableASTnode> argument = std::make_unique<VariableASTnode>(CurTok,"","");
+static unique_ptr<GlobalVariableAST> globalVar = std::make_unique<GlobalVariableAST>(CurTok,"","");
 static string vartype = "";
 static string functiontype = "";
 static vector<unique_ptr<VariableASTnode>> argumentList = {};
@@ -862,6 +898,11 @@ void resetPrototypeName()
 void resetArgument()
 {
   argument = std::make_unique<VariableASTnode>(nullToken,"","");
+}
+
+void resetGlobalVar()
+{
+  globalVar = std::make_unique<GlobalVariableAST>(nullToken,"","");
 }
 
 void resetVartype()
@@ -2949,11 +2990,12 @@ bool p_decl_prime()
       return false;
     }
 
-    argument = std::make_unique<VariableASTnode>(variableIdent,vartype,variableIdent.lexeme);
-    root.push_back(std::move(argument));
+    //global variable
+    globalVar = std::make_unique<GlobalVariableAST>(variableIdent,vartype,variableIdent.lexeme);
+    root.push_back(std::move(globalVar));
     resetVartype();
     resetVariableToken();
-    resetArgument();
+    resetGlobalVar();
 
     return true;
 
@@ -3070,7 +3112,7 @@ bool p_extern()
       return false;
   }
 
-  prototypeName.append(ident + " ");
+  prototypeName.append(ident);
 
   //got function name
 
@@ -3107,7 +3149,8 @@ bool p_extern()
   }
   cout<<"size:"<<argumentList.size()<<endl;
   unique_ptr<PrototypeAST> Proto = std::make_unique<PrototypeAST>(prototypeName,std::move(argumentList));
-  root.push_back(std::make_unique<FunctionAST>(std::move(Proto),std::move(body)));
+  // root.push_back(std::make_unique<FunctionAST>(std::move(Proto),std::move(body)));
+  root.push_back(std::move(Proto));
   resetArgumentList();
   resetPrototypeName();
 
@@ -3311,6 +3354,7 @@ static IRBuilder<> Builder(TheContext);
 static std::unique_ptr<Module> TheModule;
 
 static std::map<std::string, AllocaInst*> NamedValues;
+static map<string,GlobalVariable*> GlobalVariables;
 
 static AllocaInst* CreateEntryBlockAlloca(Function *TheFunction, const std::string &VarName, string type) {
   IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
@@ -3346,7 +3390,20 @@ Value *VariableASTnode::codegen() {
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
   AllocaInst* varAlloca = CreateEntryBlockAlloca(TheFunction, Val, Type);
   //store in NamedValues
-  NamedValues.insert({Val,varAlloca});
+  
+  if(NamedValues.insert({Val,varAlloca}).second == false) //check if symbol table already contains same variable name
+  {
+    string existTy = "";
+    if(NamedValues[Val]->getAllocatedType()->isIntegerTy(32))
+      existTy = "int";
+    else if(NamedValues[Val]->getAllocatedType()->isIntegerTy(1))
+      existTy = "bool";
+    else if(NamedValues[Val]->getAllocatedType()->isFloatTy())
+      existTy = "float";
+    
+    errs()<<"Semantic error: Redefinition of global variable "<<Val<<" with different type "<<Type<<". Variable "<<Val<<" of type "<<existTy<<" already exists.\n";
+    return nullptr;
+  }
   //Value* var = Builder.CreateLoad(Type::getInt32Ty(TheContext), varAlloca, Val);
   return varAlloca;
 }
@@ -3355,13 +3412,31 @@ Value *VariableReferenceASTnode::codegen() {
   // Look this variable up in the function.
   cout<<"VarRef codegen\n";
   AllocaInst *V = NamedValues[Name];
-  if (!V)
+  if(!V)
   {
-    errs()<<"Semantic error: Unknown variable name: "<<Name<<".\n";
-    return nullptr;
+    //check if its a global variable instead
+    GlobalVariable *GV = GlobalVariables[Name];
+    if(!GV)
+    {
+      errs()<<"Semantic error: Unknown variable name: "<<Name<<"\n";
+      return nullptr;
+    }
+    else
+    {
+      //load the global variable
+      if(GV->getValueType()->isFloatTy())
+        return Builder.CreateLoad(Type::getFloatTy(TheContext), GV, Name);
+      else if(GV->getValueType()->isIntegerTy(32))
+        return Builder.CreateLoad(Type::getInt32Ty(TheContext), GV, Name);
+      else if(GV->getValueType()->isIntegerTy(1))
+        return Builder.CreateLoad(Type::getInt1Ty(TheContext), GV, Name);
+      else
+        return nullptr;
+    }
   }
-  //load Value from allocaInst in NamedValues
 
+
+  //load Value from allocaInst in NamedValues
   if(V->getAllocatedType()->isFloatTy())
     return Builder.CreateLoad(Type::getFloatTy(TheContext), V, Name);
   else if(V->getAllocatedType()->isIntegerTy(32))
@@ -3431,7 +3506,7 @@ Value* ReturnExprASTnode::codegen(){
   cout<<"Return codegen\n";
   Value* returnExpr = ReturnExpr->codegen();
   if(returnExpr != nullptr)
-    return Builder.CreateRet(ReturnExpr->codegen());
+    return Builder.CreateRet(returnExpr);
   else
     return nullptr;
 }
@@ -3440,25 +3515,30 @@ Function* PrototypeAST::codegen(){
     cout<<"Prototype codegen\n";
   // Make the function type:
 
-
+  //bool isExtern = false;
   string ReturnType = "";
-  size_t space_pos = Name.find(" ");    
+  string origName = getName();
+  size_t space_pos = origName.find(" ");    
   if (space_pos != std::string::npos) 
   {
-    ReturnType = Name.substr(0, space_pos);
+    ReturnType = origName.substr(0, space_pos);
   }
 
-  Name = Name.substr(space_pos + 1);
+  origName = origName.substr(space_pos + 1);
+  // cout<<"F: "<<Name<<endl;
 
   if(ReturnType == "extern") //for extern functions
   {
-    size_t space_pos_2 = Name.find(" ");    
+    //isExtern = true;
+    size_t space_pos_2 = origName.find(" ");    
     if (space_pos_2 != std::string::npos) 
     {
-      ReturnType = Name.substr(0, space_pos_2);
-      Name = Name.substr(space_pos_2 + 1);
+      ReturnType = origName.substr(0, space_pos_2);
+      origName = origName.substr(space_pos_2 + 1);
     }
   }
+
+  // cout<<"E: "<<Name<<"|"<<endl;
 
   string ArgType = "";
   vector<Type *> ArgTypes;
@@ -3504,7 +3584,7 @@ Function* PrototypeAST::codegen(){
 //  if(Name == "int main")
 //   Name = "main";
 
- Function *F = Function::Create(FT, Function::ExternalLinkage, Name, TheModule.get());
+ Function *F = Function::Create(FT, Function::ExternalLinkage, origName, TheModule.get());
  //Set names for all arguments.
  unsigned Idx = 0;
  for (auto &Arg : F->args())
@@ -3512,6 +3592,46 @@ Function* PrototypeAST::codegen(){
 
  return F;
   // return nullptr;
+}
+
+Value* GlobalVariableAST::codegen(){
+  cout<<"Global variable codgen\n";
+  // return nullptr;
+  bool isConstant = false; //idk if this matters for global variables - ask tutors if it causes problems - false sets to global, true sets it to constant
+  string ty = getType();
+  int alignSize = 4;
+  Type* t = nullptr;
+
+  if(ty == "int")
+    t = Type::getInt32Ty(TheContext);
+  else if(ty == "float")
+    t = Type::getFloatTy(TheContext);
+  else if(ty == "bool")
+  {
+    t = Type::getInt1Ty(TheContext);
+    alignSize = 1;
+  }
+  else
+    return nullptr;
+
+  GlobalVariable* g = new GlobalVariable(*(TheModule.get()),t,isConstant,GlobalValue::CommonLinkage,Constant::getNullValue(t));
+  g->setAlignment(MaybeAlign(alignSize));
+  g->setName(Val);
+
+  if(GlobalVariables.insert({Val,g}).second == false)
+  {
+    string existTy = "";
+    if(GlobalVariables[Val]->getValueType()->isIntegerTy(32))
+      existTy = "int";
+    else if(GlobalVariables[Val]->getValueType()->isIntegerTy(1))
+      existTy = "bool";
+    else if(GlobalVariables[Val]->getValueType()->isFloatTy())
+      existTy = "float";
+    
+    errs()<<"Semantic error: Redefinition of global variable "<<Val<<" with different type "<<ty<<". Variable "<<Val<<" of type "<<existTy<<" already exists.\n";
+    return nullptr;
+  }
+  return g;
 }
 
 Function* FunctionAST::codegen(){
@@ -3637,7 +3757,7 @@ for(int i = 0; i < Body.size(); i++)
 //===----------------------------------------------------------------------===//
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
-                                     const unique_ptr<ASTnode> &ast) {
+                                     const unique_ptr<TopLevelASTnode> &ast) { //changes made
   os << ast->to_string(); //changes made
   return os;
 }
@@ -3701,10 +3821,12 @@ int main(int argc, char **argv) {
   llvm::outs() << "root"<< "\n|\n";
   for(int i = 0; i < root.size(); i++)
   {
-    if(root[i]->codegen() == nullptr) //IR Code Generator - this operates while traversing AST nodes
+    /*IR Code Generator - this operates while traversing AST nodes*/
+    if(root[i]->codegen() == nullptr)
     {
       return 0; 
     }
+
     if(i == root.size() - 1)
     {
       llvm::outs() << "|-> " << root[i] << "\n";

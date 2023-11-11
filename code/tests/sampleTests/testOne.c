@@ -158,6 +158,8 @@ float asd()
 }
 
 int a;
+float b;
+bool c;
 
 bool test(int a, float b, bool c)
 {
@@ -180,13 +182,16 @@ int ret(float h)
 
 //ret(5.0); //func call outside block not allowed
 
-int o; //need to set this to global - create a new AST node for globalVarDecl - rn it is ending up under function ret()
+int o;
+// float o; //duplicate names of global variables not allowed
 int main()
 {
     int a;
     int b;
+    // int b;
     tester(a);
     // a = asd(b);
-    tester(b);
+    tester(o);
+    // lineTwo(a,90.0);
     return ret(90.0);
 }
