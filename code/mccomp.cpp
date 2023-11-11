@@ -535,6 +535,14 @@ class VariableASTnode : public ASTnode{
 
   public:
   VariableASTnode(TOKEN tok, string type, string val) : Type(type), Val(val), Tok(tok) {}
+  string getVal()
+  {
+    return Val;
+  }
+  string getType()
+  {
+    return Type;
+  }
   virtual Value *codegen() override;
   // virtual AllocaInst *codegen() override;
   virtual std::string to_string() const override {
@@ -737,7 +745,12 @@ public:
   PrototypeAST(std::string &Name, std::vector<unique_ptr<VariableASTnode>> Args)
       : Name(Name), Args(std::move(Args)) {}
 
-   const std::string &getName() const { return Name; }
+  const std::string &getName() const { return Name; } //unused
+
+  string getArgName(int index)
+  {
+    return Args.at(index)->getVal();
+  }
 
   // virtual Value *codegen() override;
   virtual Function *codegen() override;
@@ -898,7 +911,7 @@ void resetUnaryExpr()
 }
 
 
-
+static bool errorReported = false;
 
 //===----------------------------------------------------------------------===//
 // Recursive Descent Parser - Function call for each production
@@ -1028,6 +1041,9 @@ vector<TOKEN_TYPE> FOLLOW_args{RPAR};
 
 vector<TOKEN_TYPE> FOLLOW_arg_list_prime{RPAR};
 
+
+/* Helper functions for parser and AST generation*/
+
 static bool contains(int type, vector<TOKEN_TYPE> list)
 {
   for(int i = 0; i < list.size(); i++)
@@ -1048,39 +1064,6 @@ bool match(TOKEN_TYPE token)
   else
     return false;
 }
-
-/* Add function calls for each production */
-
-bool p_extern_list(); bool p_extern_list_prime();
-bool p_extern();
-bool p_type_spec();
-bool p_decl_list(); bool p_decl_list_prime();
-bool p_decl();
-bool p_decl_prime();
-bool p_var_type();
-bool p_params();
-bool p_param_list(); bool p_param_list_prime();
-bool p_param();
-bool p_block();
-bool p_local_decls();
-bool p_local_decl();
-bool p_stmt_list();
-bool p_stmt();
-bool p_expr_stmt();
-bool p_while_stmt();
-bool p_if_stmt();
-bool p_else_stmt();
-bool p_return_stmt(); bool p_return_stmt_prime();
-bool p_expr();
-bool p_exprStart();
-bool p_rval_eight(); bool p_rval_eight_prime();
-bool p_rval_seven(); bool p_rval_seven_prime();
-bool p_rval_six(); bool p_rval_six_prime();
-bool p_rval_five(); bool p_rval_five_prime();
-bool p_rval_four(); bool p_rval_four_prime();
-bool p_rval_three(); bool p_rval_three_prime();
-bool p_rval_two(); bool p_rval_one(); bool p_rval();
-bool p_args(); bool p_arg_list(); bool p_arg_list_prime();
 
 void addFunctionAST()
 {
@@ -1475,13 +1458,46 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
       rhs.push_back(expression.at(i));
     }
 
-    cout<<op<<endl;
-    cout<<"printing"<<endl;
-    printExpression(expression);
+    // cout<<op<<endl;
+    // cout<<"printing"<<endl;
+    // printExpression(expression);
     return std::move(make_unique<BinaryExprASTnode>(op, std::move(createExprASTnode(lhs)), std::move(createExprASTnode(rhs)))); //recursive
   }
   return nullptr; //error
 }
+
+/* Function calls for each production */
+
+bool p_extern_list(); bool p_extern_list_prime();
+bool p_extern();
+bool p_type_spec();
+bool p_decl_list(); bool p_decl_list_prime();
+bool p_decl();
+bool p_decl_prime();
+bool p_var_type();
+bool p_params();
+bool p_param_list(); bool p_param_list_prime();
+bool p_param();
+bool p_block();
+bool p_local_decls();
+bool p_local_decl();
+bool p_stmt_list();
+bool p_stmt();
+bool p_expr_stmt();
+bool p_while_stmt();
+bool p_if_stmt();
+bool p_else_stmt();
+bool p_return_stmt(); bool p_return_stmt_prime();
+bool p_expr();
+bool p_exprStart();
+bool p_rval_eight(); bool p_rval_eight_prime();
+bool p_rval_seven(); bool p_rval_seven_prime();
+bool p_rval_six(); bool p_rval_six_prime();
+bool p_rval_five(); bool p_rval_five_prime();
+bool p_rval_four(); bool p_rval_four_prime();
+bool p_rval_three(); bool p_rval_three_prime();
+bool p_rval_two(); bool p_rval_one(); bool p_rval();
+bool p_args(); bool p_arg_list(); bool p_arg_list_prime();
 
 bool p_arg_list_prime()
 {
@@ -1490,7 +1506,12 @@ bool p_arg_list_prime()
     //return match(COMMA) & p_arg_list();
     TOKEN temp = CurTok;
     if(!match(COMMA))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  ,  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
     
     expression.push_back(temp);
 
@@ -1505,6 +1526,9 @@ bool p_arg_list_prime()
     }
     else
     {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
     }
   }
@@ -1528,6 +1552,9 @@ bool p_args()
     }
     else
     {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
     }
   }
@@ -1541,16 +1568,31 @@ bool p_rval()
     //return match(LPAR) & p_args() & match(RPAR);
     TOKEN temp = CurTok;
     if(!match(LPAR))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  (  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
     
     expression.push_back(temp);
 
     if(!p_args())
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     temp = CurTok;
     if(!match(RPAR))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  )  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     expression.push_back(temp);
 
@@ -1565,6 +1607,9 @@ bool p_rval()
     }
     else
     {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
     }
   }
@@ -1579,16 +1624,31 @@ bool p_rval_one()
     //return match(LPAR) & p_expr() & match(RPAR);
     TOKEN temp = CurTok;
     if(!match(LPAR))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  ()  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
     
     expression.push_back(temp);
 
     if(!p_expr())
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
     
     temp = CurTok;
     if(!match(RPAR))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  )  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
     
     expression.push_back(temp);
     return true;
@@ -1598,7 +1658,12 @@ bool p_rval_one()
     // return match(IDENT) & p_rval();
     variableIdent = CurTok;
     if(!match(IDENT))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected an identifier at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
     
     expression.push_back(variableIdent);
     resetVariableToken();
@@ -1610,7 +1675,12 @@ bool p_rval_one()
     // return match(INT_LIT);
     variableIdent = CurTok;
     if(!match(INT_LIT))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected an int literal at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     expression.push_back(variableIdent);
     resetVariableToken();
@@ -1622,7 +1692,12 @@ bool p_rval_one()
     // return match(FLOAT_LIT);
     variableIdent = CurTok;
     if(!match(FLOAT_LIT))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected a float literal at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     expression.push_back(variableIdent);
     resetVariableToken();
@@ -1634,7 +1709,12 @@ bool p_rval_one()
     // return match(BOOL_LIT);
     variableIdent = CurTok;
     if(!match(BOOL_LIT))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected a bool literal at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     expression.push_back(variableIdent);
     resetVariableToken();
@@ -1643,6 +1723,9 @@ bool p_rval_one()
   }
   else
   {
+    if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false;
   }
 }
@@ -1656,7 +1739,12 @@ bool p_rval_two()
     //return match(MINUS) & p_rval_two();
     TOKEN temp = CurTok;
     if(!match(MINUS))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  -  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     //unary.append("-");
     expression.push_back(temp);
@@ -1667,7 +1755,12 @@ bool p_rval_two()
     //return match(NOT) & p_rval_two();
     TOKEN temp = CurTok;
     if(!match(NOT))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  !  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     //unary.append("!");
     expression.push_back(temp);
@@ -1679,6 +1772,9 @@ bool p_rval_two()
   }
   else
   {
+    if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false;
   }
 }
@@ -1697,7 +1793,12 @@ bool p_rval_three_prime()
     // return match(ASTERIX) & p_rval_two() & p_rval_three_prime();
     TOKEN temp = CurTok;
     if(!match(ASTERIX))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  *  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
     
     expression.push_back(temp);
     return p_rval_two() & p_rval_three_prime();
@@ -1706,7 +1807,12 @@ bool p_rval_three_prime()
   {
     TOKEN temp = CurTok;
     if(!match(DIV))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  /  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
     
     expression.push_back(temp);
     return p_rval_two() & p_rval_three_prime();
@@ -1716,7 +1822,12 @@ bool p_rval_three_prime()
   {
     TOKEN temp = CurTok;
     if(!match(MOD))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected"<<"  %  "<<"at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
     
     expression.push_back(temp);
     return p_rval_two() & p_rval_three_prime();
@@ -1730,7 +1841,12 @@ bool p_rval_three_prime()
       return true;
     }
     else
+    {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
   }
 }
 
@@ -1749,7 +1865,12 @@ bool p_rval_four_prime()
     //return match(PLUS) & p_rval_three() & p_rval_four_prime();
     TOKEN temp = CurTok;
     if(!match(PLUS))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected"<<"  +  "<<"at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
     
     expression.push_back(temp);
 
@@ -1760,7 +1881,12 @@ bool p_rval_four_prime()
     //return match(MINUS) & p_rval_three() & p_rval_four_prime();
     TOKEN temp = CurTok;
     if(!match(MINUS))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  -  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
     
     expression.push_back(temp);
 
@@ -1774,7 +1900,12 @@ bool p_rval_four_prime()
       return true;
     }
     else
+    {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
   }
 }
 
@@ -1792,7 +1923,12 @@ bool p_rval_five_prime()
     // return match(LE) & p_rval_four() & p_rval_five_prime();
     TOKEN temp = CurTok;
     if(!match(LE))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  <=  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     expression.push_back(temp);
     return p_rval_four() & p_rval_five_prime();
@@ -1802,7 +1938,12 @@ bool p_rval_five_prime()
     //return match(LT) & p_rval_four() & p_rval_five_prime();
     TOKEN temp = CurTok;
     if(!match(LT))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  <  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     expression.push_back(temp);
     return p_rval_four() & p_rval_five_prime();
@@ -1812,7 +1953,12 @@ bool p_rval_five_prime()
     //return match(GE) & p_rval_four() & p_rval_five_prime();
     TOKEN temp = CurTok;
     if(!match(GE))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  >=  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     expression.push_back(temp);
     return p_rval_four() & p_rval_five_prime();
@@ -1822,7 +1968,12 @@ bool p_rval_five_prime()
     //return match(GT) & p_rval_four() & p_rval_five_prime();
     TOKEN temp = CurTok;
     if(!match(GT))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  >  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     expression.push_back(temp);
     return p_rval_four() & p_rval_five_prime();
@@ -1835,7 +1986,12 @@ bool p_rval_five_prime()
       return true;
     }
     else
+    {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
   }
 }
 
@@ -1853,7 +2009,12 @@ bool p_rval_six_prime()
     //return match(EQ) & p_rval_five() & p_rval_six_prime();
     TOKEN temp = CurTok;
     if(!match(EQ))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  ==  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     expression.push_back(temp);
 
@@ -1864,7 +2025,12 @@ bool p_rval_six_prime()
     //return match(NE) & p_rval_five() & p_rval_six_prime();
     TOKEN temp = CurTok;
     if(!match(NE))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  !=  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     expression.push_back(temp);
 
@@ -1878,7 +2044,12 @@ bool p_rval_six_prime()
       return true;
     }
     else
+    {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
   }
 }
 
@@ -1896,7 +2067,12 @@ bool p_rval_seven_prime()
     //return match(AND) & p_rval_six() & p_rval_seven_prime();
     TOKEN temp = CurTok;
     if(!match(AND))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  &&  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     expression.push_back(temp);
 
@@ -1910,7 +2086,12 @@ bool p_rval_seven_prime()
       return true;
     }
     else
+    {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
   }
 }
 
@@ -1928,15 +2109,30 @@ bool p_rval_eight_prime()
     //return match(OR) & p_rval_seven() & p_rval_eight_prime();
     TOKEN temp = CurTok;
     if(!match(OR))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  ||  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     expression.push_back(temp);
 
     if(!p_rval_seven())
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     if(!p_rval_eight_prime())
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     return true;
   }
@@ -1948,7 +2144,12 @@ bool p_rval_eight_prime()
       return true;
     }
     else
+    {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
   }
 }
 
@@ -1957,13 +2158,26 @@ bool p_return_stmt_prime()
   cout<<"return_stmt'"<<endl;
   if(CurTok.type == SC)
   {
-    return match(SC);
+    if(!match(SC))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  ;  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
+      return false;
+    }
+
+    return true;
   }
   else if(contains(CurTok.type,FIRST_expr))
   {
     // return p_expr() & match(SC);
     if(!p_expr())
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
     
     // //checkForUnary();
     cout<<"Printing"<<endl;
@@ -1973,10 +2187,21 @@ bool p_return_stmt_prime()
     stmtList.push_back(std::move(p));
     resetExpression();
 
-    return match(SC);
+    if(!match(SC))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  ;  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
+      return false;
+    }
+
+    return true;
   }
   else
   {
+    if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false;
   }
 }
@@ -1986,13 +2211,23 @@ bool p_return_stmt()
   cout<<"return_stmt"<<endl;
   //return match(RETURN) & p_return_stmt_prime();
   if(!match(RETURN))
+  {
+    if(!errorReported)
+        errs()<<"Syntax error: Expected  `return`  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false;
+  }
   
   pair <string,unique_ptr<ASTnode>> p = make_pair("return",std::move(nullptr));
   stmtList.push_back(std::move(p));
 
-   if(!p_return_stmt_prime())
+  if(!p_return_stmt_prime())
+  {
+    if(!errorReported)
+      errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false;
+  }
   
   pair <string,unique_ptr<ASTnode>> n = make_pair("new",std::move(nullptr));
   stmtList.push_back(std::move(n));
@@ -2005,10 +2240,20 @@ bool p_expr()
   cout<<"expr"<<endl;
   //return p_exprStart() & p_rval_eight();
   if(!p_exprStart())
+  {
+    if(!errorReported)
+      errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false;
+  }
 
   if(!p_rval_eight())
+  {
+    if(!errorReported)
+      errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false;
+  }
 
   //print out expression
   // //printExpression();
@@ -2035,11 +2280,21 @@ bool p_exprStart()
 
       variableIdent = CurTok;
       if(!match(IDENT))
+      {
+        if(!errorReported)
+          errs()<<"Syntax error: Expected an identifier at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+        errorReported = true;
         return false;
+      }
       
       TOKEN temp = CurTok;
       if(!match(ASSIGN))
+      {
+        if(!errorReported)
+          errs()<<"Syntax error: Expected  =  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+        errorReported = true;
         return false;
+      }
 
       expression.push_back(variableIdent);
       expression.push_back(temp);
@@ -2047,13 +2302,6 @@ bool p_exprStart()
 
       return p_exprStart();
 
-      //https://en.wikipedia.org/wiki/Operator-precedence_parser
-      //create vector that contains expression
-      //pass it onto new function which parses it and apply precedence when creating AST
-      //checkwith clang -cc1 -ast-dump sampleTests/testOne.c
-
-      //return match(IDENT) & match(ASSIGN) & p_exprStart();
-    
   }
   else
   {
@@ -2068,6 +2316,9 @@ bool p_exprStart()
     }
     else
     {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
     }
   }
@@ -2080,13 +2331,23 @@ bool p_else_stmt()
   {
     // return match(ELSE) & p_block();
     if(!match(ELSE))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  `else`  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     pair <string,unique_ptr<ASTnode>> p = make_pair("else",std::move(nullptr));
     stmtList.push_back(std::move(p));
     
     if(!p_block())
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     return true;
 
@@ -2100,6 +2361,9 @@ bool p_else_stmt()
     }
     else
     {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
     }
   }
@@ -2110,8 +2374,38 @@ bool p_if_stmt()
 {
   cout<<"if_stmt"<<endl;
   // return match(IF) & match(LPAR) & p_expr() & match(RPAR) & p_block() & p_else_stmt();
-  if(!(match(IF) & match(LPAR) & p_expr() & match(RPAR)))
+
+  if(!match(IF))
+  {
+    if(!errorReported)
+        errs()<<"Syntax error: Expected  `if`  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false;
+  }
+
+  if(!match(LPAR))
+  {
+    if(!errorReported)
+        errs()<<"Syntax error: Expected  (  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
+    return false;
+  }
+
+  if(!p_expr())
+  {
+    if(!errorReported)
+      errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
+    return false;
+  }
+
+  if(!match(RPAR))
+  {
+    if(!errorReported)
+        errs()<<"Syntax error: Expected  )  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
+    return false;
+  }
   
   pair <string,unique_ptr<ASTnode>> p = make_pair("if",std::move(nullptr));
   stmtList.push_back(std::move(p));
@@ -2124,10 +2418,20 @@ bool p_if_stmt()
   resetExpression();
 
   if(!p_block())
+  {
+    if(!errorReported)
+      errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false;
-  
+  }
+
   if(!p_else_stmt())
+  {
+    if(!errorReported)
+      errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false;
+  }
   
   pair <string,unique_ptr<ASTnode>> n = make_pair("new",std::move(nullptr));
   stmtList.push_back(std::move(n));
@@ -2138,8 +2442,37 @@ bool p_if_stmt()
 bool p_while_stmt()
 {
   // return match(WHILE) & match(LPAR) & p_expr() & match(RPAR) & p_stmt();
-  if((match(WHILE) & match(LPAR) & p_expr() & match(RPAR)) == false)
+  if(!match(WHILE))
+  {
+    if(!errorReported)
+        errs()<<"Syntax error: Expected  `while`  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
     return false;
+  }
+
+  if(!match(LPAR))
+  {
+    if(!errorReported)
+        errs()<<"Syntax error: Expected  (  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
+    return false;
+  }
+
+  if(!p_expr())
+  {
+    if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
+    return false;
+  }
+
+  if(!match(RPAR))
+  {
+    if(!errorReported)
+        errs()<<"Syntax error: Expected  )  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
+    return false;
+  }
   
   pair <string,unique_ptr<ASTnode>> p = make_pair("while",std::move(nullptr));
   stmtList.push_back(std::move(p));
@@ -2153,7 +2486,12 @@ bool p_while_stmt()
 
 
   if(!p_stmt())
+  {
+    if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
     return false;
+  }
   
   pair <string,unique_ptr<ASTnode>> n = make_pair("new",std::move(nullptr));
   stmtList.push_back(std::move(n));
@@ -2167,9 +2505,19 @@ bool p_expr_stmt()
   if(contains(CurTok.type, FIRST_expr))
   {
     if(!p_expr())
+    {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
     if(!match(SC))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  ;  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
     // //printExpression();
 
     //checkForUnary();
@@ -2184,11 +2532,21 @@ bool p_expr_stmt()
   }
   else if(CurTok.type == SC)
   {
-    return match(SC);
+     if(!match(SC))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  ;  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
+      return false;
+    }
+
+    return true;
   }
   else
   {
-    errs()<<"Syntax error: Token "<<CurTok.lexeme<<" invalid. \n";
+    if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false;
   }
 }
@@ -2218,6 +2576,9 @@ bool p_stmt()
   }
   else
   {
+    if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false;
   }
 }
@@ -2229,7 +2590,12 @@ bool p_stmt_list()
   if(contains(CurTok.type, FIRST_stmt_list))
   {
     if(!p_stmt())
+    {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
     
     return p_stmt_list();
   }
@@ -2241,7 +2607,12 @@ bool p_stmt_list()
       return true;
     }
     else
+    {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
   }
 }
 
@@ -2250,17 +2621,26 @@ bool p_local_decl()
   cout<<"local_decl"<<endl;
   if(!p_var_type())
   {
+    if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
     return false;
   }
 
   variableIdent = CurTok;
   if(!match(IDENT))
   {
+    if(!errorReported)
+        errs()<<"Syntax error: Expected an identifier at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false;
   }
 
   if(!match(SC))
   {
+    if(!errorReported)
+        errs()<<"Syntax error: Expected  ;  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false;
   }
 
@@ -2281,6 +2661,9 @@ bool p_local_decls()
    {
       if(!p_local_decl())
       {
+        if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
         return false;
       }
 
@@ -2304,7 +2687,12 @@ bool p_local_decls()
       return true;
     }
     else
+    {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
    }
 }
 
@@ -2313,12 +2701,22 @@ bool p_param()
   cout<<"param"<<endl;
   //return p_var_type() & match(IDENT);
   if(!p_var_type())
+  {
+    if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
     return false;
+  }
 
   TOKEN identifier = CurTok;
   
   if(!match(IDENT))
+  {
+    if(!errorReported)
+        errs()<<"Syntax error: Expected an identifier at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false;
+  }
 
   //argument.append(identifier);
 
@@ -2336,11 +2734,17 @@ bool p_block()
 
   if(!match(LBRA))
   {
+    if(!errorReported)
+        errs()<<"Syntax error: Expected  {  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
     return false;
   }
 
   if(!p_local_decls())
   {
+    if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
     return false;
   }
 
@@ -2348,11 +2752,17 @@ bool p_block()
 
    if(!p_stmt_list())
   {
+    if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
     return false;
   }
 
   if(!match(RBRA))
   {
+    if(!errorReported)
+        errs()<<"Syntax error: Expected  }  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false;
   }
 
@@ -2368,22 +2778,46 @@ bool p_var_type()
   cout<<"var_type"<<endl;
   if(CurTok.type == INT_TOK)
   {
+    if(!match(INT_TOK))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  `int`  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
+      return false;
+    }
     vartype.append("int");
     cout<<vartype<<endl;
-    return match(INT_TOK);
+    return true;
   }
   else if(CurTok.type == FLOAT_TOK)
   {
+    if(!match(FLOAT_TOK))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  `float`  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
+      return false;
+    }
     vartype.append("float");
-    return match(FLOAT_TOK);
+    return true;
   }
   else if(CurTok.type == BOOL_TOK)
   {
+    if(!match(BOOL_TOK))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  `bool`  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
+      return false;
+    }
     vartype.append("bool");
-    return match(BOOL_TOK);
+    return true;
   }
   else
   {
+    if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false;
   }
 }
@@ -2393,8 +2827,15 @@ bool p_type_spec()
   cout<<"type_spec"<<endl;
   if(CurTok.type == VOID_TOK)
   {
+    if(!match(VOID_TOK))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  `void`   at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
+      return false;
+    }
     prototypeName.append("void");
-    return match(VOID_TOK);
+    return true;
   }
   else if(contains(CurTok.type,FIRST_var_type))
   {
@@ -2402,6 +2843,9 @@ bool p_type_spec()
   }
   else
   {
+    if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false;
   }
 }
@@ -2413,10 +2857,20 @@ bool p_param_list_prime()
   {
     
     if(!match(COMMA))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  ,  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     if(!p_param_list())
+    {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
     
     return true;
     //return match(COMMA) & p_param_list();
@@ -2430,7 +2884,12 @@ bool p_param_list_prime()
       return true;
     }
     else
+    {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
   }
 }
 
@@ -2462,7 +2921,12 @@ bool p_params()
         return true; //consume epsilon
       }
       else
+      {
+        if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+        errorReported = true;
         return false; //fail
+      }
   }
 }
 
@@ -2478,7 +2942,12 @@ bool p_decl_prime()
 
 
     if(!match(SC))
+    {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  ;  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
+    }
 
     argument = std::make_unique<VariableASTnode>(variableIdent,vartype,variableIdent.lexeme);
     root.push_back(std::move(argument));
@@ -2493,11 +2962,17 @@ bool p_decl_prime()
   {
     if(!match(LPAR))
     {
+      if(!errorReported)
+          errs()<<"Syntax error: Expected  (  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
     }
 
     if(!p_params())
     {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
     }
 
@@ -2505,6 +2980,9 @@ bool p_decl_prime()
 
     if(!match(RPAR))
     {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  )  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
     }
 
@@ -2512,6 +2990,9 @@ bool p_decl_prime()
 
     if(!p_block())
     {
+      if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
     }
     // printStmtList();
@@ -2523,6 +3004,9 @@ bool p_decl_prime()
   }
   else
   {
+    if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false; //fail
   }
 }
@@ -2542,7 +3026,12 @@ bool p_extern_list_prime()
         return true; //consume epsilon
       }
       else
+      {
+        if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+        errorReported = true;
         return false; //fail
+      }
    }
 }
 
@@ -2552,14 +3041,20 @@ bool p_extern()
   //return match(EXTERN) & p_type_spec() & match(IDENT) & match(LPAR) & p_params() & match(RPAR) & match(SC);
   if(!match(EXTERN))
   {
-    return false;
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  `extern`  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
+      return false;
   }
 
   prototypeName.append("extern ");
 
   if(!p_type_spec())
   {
-    return false;
+      if(!errorReported)
+        errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
+      return false;
   }
 
   prototypeName.append(vartype + " ");
@@ -2569,7 +3064,10 @@ bool p_extern()
 
   if(!match(IDENT))
   {
-    return false;
+      if(!errorReported)
+        errs()<<"Syntax error: Expected an identifier at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
+      return false;
   }
 
   prototypeName.append(ident + " ");
@@ -2578,22 +3076,34 @@ bool p_extern()
 
   if(!match(LPAR))
   {
-    return false;
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  (  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
+      return false;
   }
 
   if(!p_params())
   {
-    return false;
+      if(!errorReported)
+        errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
+      return false;
   }
 
   if(!match(RPAR))
   {
-    return false;
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  )  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
+      return false;
   }
 
    if(!match(SC))
   {
-    return false;
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  ;  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
+      return false;
   }
   cout<<"size:"<<argumentList.size()<<endl;
   unique_ptr<PrototypeAST> Proto = std::make_unique<PrototypeAST>(prototypeName,std::move(argumentList));
@@ -2621,7 +3131,12 @@ bool p_decl_list_prime()
         return true; //consume epsilon
       }
       else
+      {
+        if(!errorReported)
+          errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+        errorReported = true;
         return false; //fail
+      }
    }
 }
 
@@ -2633,6 +3148,9 @@ bool p_decl()
     //return p_var_type() & match(IDENT) & p_decl_prime();
     if(!p_var_type())
     {
+      if(!errorReported)
+        errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
     }
     //vartype defined
@@ -2642,6 +3160,9 @@ bool p_decl()
     functionIdent = CurTok; //in case of a function decl
     if(!match(IDENT))
     {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected an identifier at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
     }
 
@@ -2661,6 +3182,9 @@ bool p_decl()
     //return match(VOID_TOK) & match(IDENT) & match(LPAR) & p_params() & match(RPAR) & p_block();
     if(!match(VOID_TOK))
     {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  `void`  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
     }
 
@@ -2669,16 +3193,25 @@ bool p_decl()
     functionIdent = CurTok;
     if(!match(IDENT))
     {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected an identifier at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
     }
 
      if(!match(LPAR))
     {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  (  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
     }
 
     if(!p_params())
     {
+      if(!errorReported)
+        errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
     }
 
@@ -2686,6 +3219,9 @@ bool p_decl()
 
     if(!match(RPAR))
     {
+      if(!errorReported)
+        errs()<<"Syntax error: Expected  )  at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
     }
 
@@ -2693,6 +3229,9 @@ bool p_decl()
 
     if(!p_block())
     {
+      if(!errorReported)
+        errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+      errorReported = true;
       return false;
     }
     // printStmtList();
@@ -2703,6 +3242,9 @@ bool p_decl()
   }
   else
   {
+    if(!errorReported)
+      errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
+    errorReported = true;
     return false; //fail
   }
 }
@@ -2750,7 +3292,7 @@ static bool parser() {
   getNextToken();
   if(p_program() & (CurTok.type == EOF_TOK))
   {
-    cout<<"Parsing successful"<<endl;
+    cout<<"Parsing successful."<<endl;
     return true;
   }
   else
@@ -2770,80 +3312,324 @@ static std::unique_ptr<Module> TheModule;
 
 static std::map<std::string, AllocaInst*> NamedValues;
 
-static AllocaInst* CreateEntryBlockAlloca(Function *TheFunction, const std::string &VarName) {
+static AllocaInst* CreateEntryBlockAlloca(Function *TheFunction, const std::string &VarName, string type) {
   IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
   TheFunction->getEntryBlock().begin());
-  return TmpB.CreateAlloca(Type::getInt32Ty(TheContext), 0, VarName.c_str()); //the type (first argument) can be changed (for now its Int32)
+  if(type == "int")
+    return TmpB.CreateAlloca(Type::getInt32Ty(TheContext), 0, VarName.c_str()); //the type (first argument) can be changed (for now its Int32)
+  else if(type == "float")
+    return TmpB.CreateAlloca(Type::getFloatTy(TheContext), 0, VarName.c_str());
+  else if(type == "bool")
+    return TmpB.CreateAlloca(Type::getInt1Ty(TheContext), 0, VarName.c_str());
+  else
+    return nullptr;
 }
 
 Value *IntASTnode::codegen() {
+  cout<<"Int codegen\n";
   return ConstantInt::get(TheContext, APInt(32,Val,true));
 }
 
 Value *FloatASTnode::codegen() {
+  cout<<"Float codegen\n";
   return ConstantFP::get(TheContext, APFloat(Val));
 }
 
 Value *BoolASTnode::codegen() {
-  if(Val == true)
-    return ConstantInt::getTrue(TheContext);
-  else
-    return ConstantInt::getFalse(TheContext);
+  cout<<"Bool codegen\n";
+  return ConstantInt::get(TheContext, APInt(1,Val,false));
 }
 
 Value *VariableASTnode::codegen() {
+  cout<<"VarDecl codegen\n";
 // AllocaInst *VariableASTnode::codegen() {
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
-  AllocaInst* varAlloca = CreateEntryBlockAlloca(TheFunction, Val);
+  AllocaInst* varAlloca = CreateEntryBlockAlloca(TheFunction, Val, Type);
   //store in NamedValues
   NamedValues.insert({Val,varAlloca});
-  Value* var = Builder.CreateLoad(Type::getInt32Ty(TheContext), varAlloca, Val);
-  return var;
+  //Value* var = Builder.CreateLoad(Type::getInt32Ty(TheContext), varAlloca, Val);
+  return varAlloca;
 }
 
 Value *VariableReferenceASTnode::codegen() {
   // Look this variable up in the function.
+  cout<<"VarRef codegen\n";
   AllocaInst *V = NamedValues[Name];
   if (!V)
   {
-    cout<<"Unknown variable name"<<endl;
+    errs()<<"Semantic error: Unknown variable name: "<<Name<<".\n";
     return nullptr;
   }
   //load Value from allocaInst in NamedValues
-  return Builder.CreateLoad(Type::getInt32Ty(TheContext), V, Name);
-  //return V;
+
+  if(V->getAllocatedType()->isFloatTy())
+    return Builder.CreateLoad(Type::getFloatTy(TheContext), V, Name);
+  else if(V->getAllocatedType()->isIntegerTy(32))
+    return Builder.CreateLoad(Type::getInt32Ty(TheContext), V, Name);
+  else if(V->getAllocatedType()->isIntegerTy(1))
+    return Builder.CreateLoad(Type::getInt1Ty(TheContext), V, Name);
+  else
+    return nullptr;
+   //return V;
 }
 
 Value* UnaryExprASTnode::codegen(){
+  cout<<"Unary codegen\n";
   return nullptr;
 }
 
 Value* BinaryExprASTnode::codegen(){
+  cout<<"Binary codegen\n";
   return nullptr;
 }
 
 Value* FuncCallASTnode::codegen(){
-  return nullptr;
+  // Look up the name in the global module table.
+  cout<<"FuncCall codegen\n";
+  Function *CalleeF = TheModule->getFunction(Callee);
+  if (!CalleeF)
+  {
+    errs()<<"Semantic error: Unknown function "<<Callee<<" referenced.\n";
+    return nullptr;
+  }
+  // If argument mismatch error.
+  if (CalleeF->arg_size() != Args.size())
+  {
+    errs()<<"Semantic error: Incorrect no. of arguments passed for function "<<Callee<<".\n";
+    return nullptr;
+  }
+  
+  std::vector<Value *> ArgsV;
+  for (unsigned i = 0, e = Args.size(); i != e; ++i) 
+  {
+    //Need to check if type for each argument is correct!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ArgsV.push_back(Args[i]->codegen());
+    if (!ArgsV.back())
+      return nullptr;
+  }
+
+  if(CalleeF->getReturnType()->isVoidTy())
+    return Builder.CreateCall(CalleeF, ArgsV); //void functions cannot have a name
+  else
+    return Builder.CreateCall(CalleeF, ArgsV, "calltmp"); 
+    // return nullptr;
 }
 
 Value* IfExprASTnode::codegen(){
+  cout<<"IfExpr codegen\n";
   return nullptr;
 }
 
 Value* WhileExprASTnode::codegen(){
+  cout<<"While codegen\n";
   return nullptr;
 }
 
 Value* ReturnExprASTnode::codegen(){
-  return nullptr;
+  // return nullptr;
+  cout<<"Return codegen\n";
+  Value* returnExpr = ReturnExpr->codegen();
+  if(returnExpr != nullptr)
+    return Builder.CreateRet(ReturnExpr->codegen());
+  else
+    return nullptr;
 }
 
 Function* PrototypeAST::codegen(){
-  return nullptr;
+    cout<<"Prototype codegen\n";
+  // Make the function type:
+
+
+  string ReturnType = "";
+  size_t space_pos = Name.find(" ");    
+  if (space_pos != std::string::npos) 
+  {
+    ReturnType = Name.substr(0, space_pos);
+  }
+
+  Name = Name.substr(space_pos + 1);
+
+  if(ReturnType == "extern") //for extern functions
+  {
+    size_t space_pos_2 = Name.find(" ");    
+    if (space_pos_2 != std::string::npos) 
+    {
+      ReturnType = Name.substr(0, space_pos_2);
+      Name = Name.substr(space_pos_2 + 1);
+    }
+  }
+
+  string ArgType = "";
+  vector<Type *> ArgTypes;
+
+  for(int i = 0; i < Args.size(); i++)
+  {
+      ArgType = Args.at(i)->getType();
+      if(ArgType == "int")
+        ArgTypes.push_back(Type::getInt32Ty(TheContext));
+      else if(ArgType == "float")
+        ArgTypes.push_back(Type::getFloatTy(TheContext));
+      else if(ArgType == "bool")
+        ArgTypes.push_back(Type::getInt1Ty(TheContext));  //bool is Int1 type
+      //ignore "void" - not allowed to be in argument list for LLVM IR
+      // else if(ArgType == "void")
+      // {
+      //   cout<<"yes"<<endl;
+      //   ArgTypes.push_back(Type::getVoidTy(TheContext));
+      // }
+  }
+
+  FunctionType *FT;
+
+  if(ReturnType == "int")
+  {
+    FT = FunctionType::get(Type::getInt32Ty(TheContext), ArgTypes, false);
+  }
+  else if(ReturnType == "float")
+  {
+    FT = FunctionType::get(Type::getFloatTy(TheContext), ArgTypes, false);
+  }
+  else if(ReturnType == "bool")
+  {
+    FT = FunctionType::get(Type::getInt1Ty(TheContext), ArgTypes, false);
+  }
+  else if(ReturnType == "void")
+  {
+    FT = FunctionType::get(Type::getVoidTy(TheContext), ArgTypes, false);
+  }
+
+//Probably better to change FunctionAST node to have a type variable
+//Or get first word from name to identify type
+//  if(Name == "int main")
+//   Name = "main";
+
+ Function *F = Function::Create(FT, Function::ExternalLinkage, Name, TheModule.get());
+ //Set names for all arguments.
+ unsigned Idx = 0;
+ for (auto &Arg : F->args())
+   Arg.setName(getArgName(Idx));
+
+ return F;
+  // return nullptr;
 }
 
 Function* FunctionAST::codegen(){
+  cout<<"Function codegen\n";
+  Function *TheFunction = TheModule->getFunction(Proto->getName());
+
+if (!TheFunction)
+  TheFunction = Proto->codegen();
+if (!TheFunction)
   return nullptr;
+ BasicBlock *BB = BasicBlock::Create(TheContext, "entry", TheFunction);
+ Builder.SetInsertPoint(BB);
+ // Record the function arguments in the NamedValues map.
+ NamedValues.clear();
+
+ for (auto &Arg : TheFunction->args()) //loading each argument in the symbol table
+ {
+  // if(!Arg.getType()->isVoidTy()) //ignore void
+  // {
+  //   AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, Arg.getName().str()); //creating an alloca for each argument
+  //   Builder.CreateStore(&Arg, Alloca);
+  //   NamedValues[std::string(Arg.getName())] = Alloca;
+  // }
+    string type = "";
+    if(Arg.getType()->isIntegerTy(32))
+      type = "int";
+    if(Arg.getType()->isFloatTy())
+      type = "float";
+    else if(Arg.getType()->isIntegerTy(1))
+      type = "bool";
+    AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, Arg.getName().str(), type); //creating an alloca for each argument
+    Builder.CreateStore(&Arg, Alloca);
+    NamedValues[std::string(Arg.getName())] = Alloca;
+ }
+
+ string returnType = "";
+  if(TheFunction->getReturnType()->isIntegerTy(32))
+    returnType = "int"; //    returnType = "int (i32)";
+  else if(TheFunction->getReturnType()->isIntegerTy(1))
+    returnType = "bool"; // returnType = "bool (i1)";
+  else if(TheFunction->getReturnType()->isFloatTy())
+    returnType = "float"; //    returnType = "float (float)";
+
+if(Body.size() == 0)//empty function body
+{
+  if(!(TheFunction->getReturnType()->isVoidTy()))
+    {
+      errs()<<"Semantic Error: Return statement of type  "<<returnType<<"  expected in function: "<<Proto->getName()<<".\n";
+      return nullptr;
+    }
+  else
+    Builder.CreateRetVoid();
+}
+
+for(int i = 0; i < Body.size(); i++)
+{
+  Value *RetVal = Body.at(i)->codegen(); //go through all ASTnodes in this function body and run codegen()
+  if(!RetVal)
+  {
+    return nullptr;
+  }
+  
+  if(i == Body.size()-1)
+  {
+    //make sure retvoid is built if the function is of void type
+    if((TheFunction->getReturnType()->isVoidTy()))
+    {
+      Builder.CreateRetVoid();
+    }
+    else
+    { 
+      if(auto RT = dyn_cast<ReturnInst>(RetVal)) //if last statement is a return statement
+      {
+        Value* returnVal = RT->getReturnValue(); 
+        //checking if the return statement is the correct type - matches the return type of the function
+        if(returnVal->getType()->isIntegerTy(32))
+        {
+          if(returnType != "int")
+          {
+            cout<<"Semantic Error: Incorrect return value of type `int` used in function: "<<Proto->getName()<<".\nExpected return type `"<<returnType<<"`.\n";
+            return nullptr;
+          }
+        }
+        if(returnVal->getType()->isIntegerTy(1)) 
+        {
+          if(returnType != "bool")
+          {
+            cout<<"Semantic Error: Incorrect return value of type `bool` used in function: "<<Proto->getName()<<".\nExpected return type `"<<returnType<<"`.\n";
+            return nullptr;
+          }
+        }
+        if(returnVal->getType()->isFloatTy())
+        {
+          if(returnType != "float")
+          {
+            cout<<"Semantic Error: Incorrect return value of type `float` used in function: "<<Proto->getName()<<".\nExpected return type `"<<returnType<<"`.\n";
+            return nullptr;
+          }
+        }
+      }
+      else //return statement not found
+      {
+        cout<<"Semantic Error: Return statement of type `"<<returnType<<"` expected in function: "<<Proto->getName()<<".\n";
+        return nullptr;
+      }
+    }
+  
+  }
+  
+}
+
+// Validate the generated code, checking
+//for consistency.
+ verifyFunction(*TheFunction);
+
+ return TheFunction;
+
+ // return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2887,7 +3673,7 @@ int main(int argc, char **argv) {
     //fprintf(stderr, "Token: %s with type %d\n", CurTok.lexeme.c_str(),CurTok.type);
     getNextToken();
   }
-  fprintf(stderr, "Lexer Finished\n");
+  fprintf(stderr, "Lexer Finished.\n");
   clearTokBuffer(); //clear token buffer before re-reading file and starting parsing
 
   // Make the module, which holds all the code.
@@ -2904,7 +3690,7 @@ int main(int argc, char **argv) {
   // Run the parser now.
   if(!parser())
   {
-    cout<<"Parsing failed"<<endl;
+    cout<<"Parsing failed."<<endl;
     return 1;
   }
   //fprintf(stderr, "Parsing Finished\n");
@@ -2915,6 +3701,10 @@ int main(int argc, char **argv) {
   llvm::outs() << "root"<< "\n|\n";
   for(int i = 0; i < root.size(); i++)
   {
+    if(root[i]->codegen() == nullptr) //IR Code Generator - this operates while traversing AST nodes
+    {
+      return 0; 
+    }
     if(i == root.size() - 1)
     {
       llvm::outs() << "|-> " << root[i] << "\n";
@@ -2926,6 +3716,9 @@ int main(int argc, char **argv) {
       // llvm::outs() << "  |-> " << root[i] << "\n";
   }
 
+  llvm::outs() << "\nAST successfully printed."<< "\n\n";
+  llvm::outs() << "IR code generation successful."<< "\n";
+
   //********************* Start printing final IR **************************
   // Print out all of the generated code into a file called output.ll
   auto Filename = "output.ll";
@@ -2936,6 +3729,11 @@ int main(int argc, char **argv) {
     errs() << "Could not open file: " << EC.message();
     return 1;
   }
+
+  //JUST FOR TESTING - REMOVE LATER
+  // ConstantInt *zero = ConstantInt::get(IntegerType::getInt32Ty(TheContext), 0);
+  // Builder.CreateRet(zero);
+
   // TheModule->print(errs(), nullptr); // print IR to terminal
   TheModule->print(dest, nullptr);
   //********************* End printing final IR ****************************
