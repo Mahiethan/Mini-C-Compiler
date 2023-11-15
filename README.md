@@ -16,3 +16,9 @@ New additions:
     - These invalid tokens are detected by the lexical analyser 
 - Root node is a list of TopLevelASTnodes as children (not an ASTnode)
     - This causes a change in the AST printer (line 3674)
+- Int or float values out of range are set to 0 or 0.0 respectively 
+    - See lines 1341 and 1355
+- Zero division not permitted for all types - gives semantic error
+    - Because it gives undefined behaviour (refer to LLVM reference manual for sdiv function)
+- Zero modulo operation also not permitted for all types
+    - Because it gives undefined behaviour (refer to LLVM reference manual for srem function)

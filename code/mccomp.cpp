@@ -470,6 +470,7 @@ public:
   virtual ~ASTnode() {}
   virtual Value *codegen() = 0;
   virtual std::string to_string() const {return "";};
+  virtual std::string getName() const {return "";};
 };
 
 /// IntASTnode - Class for integer literals like 1, 2, 10,
@@ -562,6 +563,7 @@ class VariableReferenceASTnode : public ASTnode{
   public:
   VariableReferenceASTnode(TOKEN tok, string name) : Name(name), Tok(tok) {}
   virtual Value *codegen() override;
+  std::string getName() const override{ return Name; }
   virtual std::string to_string() const override {
   //return a sting representation of this AST node
     string final = "VarRef: " + Name;
@@ -780,7 +782,7 @@ public:
   PrototypeAST(std::string &Name, std::vector<unique_ptr<VariableASTnode>> Args)
       : Name(Name), Args(std::move(Args)) {}
 
-  const std::string &getName() const { return Name; } //unused
+  const std::string &getName() const { return Name; }
 
   string getArgName(int index)
   {
@@ -1335,11 +1337,30 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
     TOKEN t = expression.at(0);
     if(t.type == INT_LIT)
     {
-      return std::move(make_unique<IntASTnode>(t,stoi(t.lexeme)));
+      int val;
+      try{
+         val = stoi(t.lexeme);
+      }
+      catch(std::out_of_range)
+      {
+        errs()<<"Warning: Value "<<t.lexeme<<" out of range for int type. Setting it to 0\n";
+        val = stoi("0");
+      }
+      
+      return std::move(make_unique<IntASTnode>(t,val));
     }
     else if(t.type == FLOAT_LIT)
     {
-      return std::move(make_unique<FloatASTnode>(t,stof(t.lexeme)));
+      float val;
+      try{
+         val = stof(t.lexeme);
+      }
+      catch(std::out_of_range)
+      {
+        errs()<<"Warning: Value "<<t.lexeme<<" out of range for float type. Setting it to 0.0\n";
+        val = stof("0.0");
+      }
+      return std::move(make_unique<FloatASTnode>(t,val));
     }
     else if(t.type == BOOL_LIT)
     {
@@ -1430,7 +1451,7 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
     int minPrecedence = 100;
     string op = "";
     int index = 0;
-    bool isOp = false;
+    bool isOp = true;
     bool unaryEnd = true;
     int valid = 0; //operators inside bracketed expressions are invalid
     for(int i = 0; i < expression.size(); i++)
@@ -1472,6 +1493,10 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
           minPrecedence = currPrecedence;
           //cout<<minPrecedence<<endl;
           index = i;
+          if(op == "=") //stop at the earliest `=` token
+          {
+            break;
+          }
         }
         isOp = true;
       }
@@ -1479,12 +1504,12 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
       {
         isOp = false;
       }
-      // if(i == expression.size()-1 & unaryEnd == false)
-      // {
-      //   auto itPos = expression.begin() + i;
-      //   expression.insert(itPos,insertRPAR);
-      //   unaryEnd = true;
-      // }
+      if(i == expression.size()-1 & unaryEnd == false)
+      {
+        auto itPos = expression.begin() + i;
+        expression.insert(itPos,insertRPAR);
+        unaryEnd = true;
+      }
       
     }
 
@@ -1499,7 +1524,7 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
       rhs.push_back(expression.at(i));
     }
 
-    // cout<<op<<endl;
+    cout<<op<<endl;
     // cout<<"printing"<<endl;
     // printExpression(expression);
     return std::move(make_unique<BinaryExprASTnode>(op, std::move(createExprASTnode(lhs)), std::move(createExprASTnode(rhs)))); //recursive
@@ -3376,12 +3401,12 @@ Value *IntASTnode::codegen() {
 
 Value *FloatASTnode::codegen() {
   cout<<"Float codegen\n";
-  return ConstantFP::get(TheContext, APFloat(Val));
+  return ConstantFP::get(TheContext, APFloat(float(Val)));
 }
 
 Value *BoolASTnode::codegen() {
   cout<<"Bool codegen\n";
-  return ConstantInt::get(TheContext, APInt(1,Val,false));
+  return ConstantInt::get(TheContext, APInt(1,int(Val),false));
 }
 
 Value *VariableASTnode::codegen() {
@@ -3448,14 +3473,421 @@ Value *VariableReferenceASTnode::codegen() {
    //return V;
 }
 
-Value* UnaryExprASTnode::codegen(){
+Value* UnaryExprASTnode::codegen(){ //DONE
   cout<<"Unary codegen\n";
-  return nullptr;
+  Value* operand = Operand->codegen();
+  if(operand == nullptr)
+    return nullptr;
+
+  string type = "";
+
+  if(operand->getType()->isIntegerTy(32))
+  {
+    type = "int";
+  }
+  else if(operand->getType()->isIntegerTy(1))
+  {
+    type = "bool";
+  }
+  else if(operand->getType()->isFloatTy())
+  {
+    type = "float";
+  }
+
+  if(Opcode == "!")
+  {
+    if(type == "float")
+    {
+      // operand = Builder.CreateCast(Instruction::FPToSI,operand,Type::getInt32Ty(TheContext));
+      // type = "int";
+      operand = Builder.CreateFCmpONE(operand, ConstantFP::get(TheContext, APFloat((float) 0.0)),"bool_cast");
+    }
+
+    if(type == "int")
+    {
+      operand = Builder.CreateIntCast(operand, Type::getInt1Ty(TheContext), false);
+    }
+
+    return Builder.CreateNot(operand,"not_temp");
+  }
+  else if(Opcode == "-")
+  {
+    if(type == "bool")
+    {
+      operand = Builder.CreateIntCast(operand, Type::getInt32Ty(TheContext), false);
+    }
+    else if(type == "float") //do a subtraction with 0
+    {
+      float zero = 0.0;
+      return Builder.CreateFSub(ConstantFP::get(TheContext,APFloat(zero)),operand);
+    }
+    return Builder.CreateNeg(operand,"neg_temp");
+  }
+  else
+    return nullptr;
+  // return nullptr;
 }
 
 Value* BinaryExprASTnode::codegen(){
   cout<<"Binary codegen\n";
-  return nullptr;
+  Value* lhs = LHS->codegen();
+  Value* rhs = RHS->codegen();
+
+  if(lhs == nullptr | rhs == nullptr)
+    return nullptr;
+
+  // string lhsType = "";
+  // string rhsType = "";
+
+  // if(lhs->getType()->isIntegerTy(32))
+  //   lhsType = "int";
+  // else if(lhs->getType()->isIntegerTy(1))
+  //   lhsType = "bool";
+  // else if(lhs->getType()->isFloatTy())
+  //   lhsType = "float";
+
+  // if(rhs->getType()->isIntegerTy(32))
+  //   rhsType = "int";
+  // else if(rhs->getType()->isIntegerTy(1))
+  //   rhsType = "bool";
+  // else if(rhs->getType()->isFloatTy())
+  //   rhsType = "float";
+
+  int lhsType = 0;
+  int rhsType = 0;
+  string lhsTypeStr = "";
+  string rhsTypeStr = "";
+
+  if(lhs->getType()->isIntegerTy(32))
+    lhsType = 1;
+  else if(lhs->getType()->isIntegerTy(1))
+    lhsType = 0;
+  else if(lhs->getType()->isFloatTy())
+    lhsType = 2;
+
+  if(rhs->getType()->isIntegerTy(32))
+    rhsType = 1;
+  else if(rhs->getType()->isIntegerTy(1))
+    rhsType = 0;
+  else if(rhs->getType()->isFloatTy())
+    rhsType = 2;
+
+  switch(lhsType)
+  {
+    case 0: lhsTypeStr = "bool"; break;
+    case 1: lhsTypeStr = "int"; break;
+    case 2: lhsTypeStr = "float"; break;
+    default: break;
+  }
+
+  switch(rhsType)
+  {
+    case 0: rhsTypeStr = "bool"; break;
+    case 1: rhsTypeStr = "int"; break;
+    case 2: rhsTypeStr = "float"; break;
+    default: break;
+  }
+
+  cout<<"lhsType: "<<lhsTypeStr<<endl;
+  cout<<"rhsType: "<<rhsTypeStr<<endl;
+
+  // if(lhsType < rhsType)
+  //     {
+  //       errs()<<"Semantic error: Widening conversion not possible from RHS type "<<lhsTypeStr<<" to LHS type "<<rhsTypeStr<<"\n";
+  //       return nullptr;
+  //     }
+  //     else if(lhsType > rhsType)
+  //     {
+  //         Builder.CreateSExt(rhs,lhs->getType(),"zext_temp");
+  //     }
+
+  // if(lhsType > rhsType)
+  // {
+  //   Value* rhsNew = Builder.CreateSExt(rhs,lhs->getType(),"zext_temp");
+  //   rhs = Builder.CreateLoad(rhsNew->getType(),rhsNew,"sext_temp");
+  // }
+
+  // if(lhsType > rhsType)
+  // {
+  //     // rhs = Builder.CreateSExt(rhs,lhs->getType(),"zext_temp");
+  //     rhs = Builder.CreateBitCast(rhs,lhs->getType(),"cast_temp");
+
+  // }
+  
+    //Modify for different types
+    if(Opcode == "=") //ASSIGN
+    {
+      cout<<"lhsType for EQ: "<<lhsTypeStr<<endl;
+      cout<<"rhsType for EQ: "<<rhsTypeStr<<endl;
+
+      if(auto *st = dyn_cast<StoreInst>(rhs))
+      {
+        cout<<"yes\n";
+        rhs = st->getValueOperand();
+
+        if(rhs->getType()->isIntegerTy(32))
+          rhsType = 1;
+        else if(rhs->getType()->isIntegerTy(1))
+          rhsType = 0;
+        else if(rhs->getType()->isFloatTy())
+          rhsType = 2;
+
+        switch(rhsType)
+        {
+          case 0: rhsTypeStr = "bool"; break;
+          case 1: rhsTypeStr = "int"; break;
+          case 2: rhsTypeStr = "float"; break;
+          default: break;
+        }
+      }
+
+      string name = LHS->getName();
+      if(name != "")
+      {
+        // cout<<"name:"<<name<<endl;
+        AllocaInst *V = NamedValues[name];
+        if(!V)
+        {
+          errs()<<"Semantic error: Unknown variable name: "<<name<<"\n";
+          return nullptr;
+        }
+        // else
+
+        if(lhsType < rhsType)
+        {
+          errs()<<"Semantic error: Widening conversion not possible from RHS type "<<rhsTypeStr<<" to LHS type "<<lhsTypeStr<<"\n";
+          return nullptr;
+        }
+        else if(lhsType > rhsType)
+        {
+            // rhs = Builder.CreateSExt(rhs,lhs->getType(),"zext_temp");
+            cout<<"casting eq\n";
+            if(lhsType == 2) //to float
+            {
+              if(rhsType == 0) //bool to float
+              {
+                rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
+                rhs = Builder.CreateCast(Instruction::SIToFP,rhs,lhs->getType());
+              }
+              else //int to float
+                rhs = Builder.CreateCast(Instruction::SIToFP,rhs,lhs->getType());
+            }
+            else if(lhsType == 1) //bool to int
+              rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
+ 
+        }
+          return Builder.CreateStore(rhs,V);
+      }
+      else
+        return nullptr;
+    }
+
+    bool isLogical = false;
+
+    if(Opcode == "||" | Opcode == "&&")
+    {
+      isLogical = true;
+    }
+
+    if(isLogical == true)
+    {
+      //set both operands to boolean type, for AND, OR operators.
+            if(lhsType == 2)
+            {
+              // lhs = Builder.CreateIntCast(lhs, Type::getInt32Ty(TheContext), false);
+              // lhs = Builder.CreateCast(Instruction::FPToSI,lhs,Type::getInt32Ty(TheContext));
+              // lhsType = 1;
+              lhs = Builder.CreateFCmpONE(lhs, ConstantFP::get(TheContext, APFloat((float) 0.0)),"bool_cast");
+              lhsType = 0;
+
+            }
+            if(rhsType == 2)
+            {
+              // rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
+              // rhs = Builder.CreateCast(Instruction::FPToSI,rhs,Type::getInt32Ty(TheContext));
+              // rhsType = 1;
+              rhs = Builder.CreateFCmpONE(rhs, ConstantFP::get(TheContext, APFloat((float) 0.0)),"bool_cast");
+              rhsType = 0;
+            }
+            
+            if(lhsType != 0)
+              lhs = Builder.CreateICmpNE(lhs, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"bool_cast");
+            if(rhsType != 0)
+              rhs = Builder.CreateICmpNE(rhs, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"bool_cast");
+
+            lhsType = 0;
+            rhsType = 0;
+    }
+   
+        if(Opcode == "||") //OR
+          return Builder.CreateLogicalOr(lhs,rhs,"or_tmp"); 
+        else if(Opcode == "&&") //AND
+          return Builder.CreateLogicalAnd(lhs,rhs,"and_tmp"); 
+
+      //Set both operands to equal types for +, -, *, /, %, ==, !=, <=, <, >= and > operators
+
+      if(lhsType != rhsType)
+      {
+        cout<<"uneequal\n";
+        int returnType = lhsType;
+        if(rhsType > returnType)
+          returnType = rhsType;
+        
+        if(returnType == rhsType)
+        {
+            if(returnType == 2) //to float
+            {
+              if(lhsType == 0) //bool to float
+              {
+                lhs = Builder.CreateIntCast(lhs, Type::getInt32Ty(TheContext), false); //bool to int
+                lhs = Builder.CreateCast(Instruction::SIToFP,lhs,rhs->getType()); //int to float
+              }
+              else //int to float
+                lhs = Builder.CreateCast(Instruction::SIToFP,lhs,rhs->getType());
+              lhsType = 2;
+            }
+            else if(returnType == 1) //bool to int
+            {
+              lhs = Builder.CreateIntCast(lhs, Type::getInt32Ty(TheContext), false);
+              lhsType = 1;
+            }
+           
+        }
+        else
+        {
+          if(returnType == 2) //to float
+          {
+            if(rhsType == 0) //bool to float
+            {
+                rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
+                rhs = Builder.CreateCast(Instruction::SIToFP,rhs,lhs->getType());
+            }
+            else //int to float
+                rhs = Builder.CreateCast(Instruction::SIToFP,rhs,lhs->getType());
+            rhsType = 2;
+          }
+            else if(returnType == 1) //bool to int
+            {
+                rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
+                rhsType = 1;
+            }
+          }
+      }
+      // else
+      // {
+      //   cout<<"No casting required\n";
+      // }
+
+      if(Opcode == "+") //PLUS
+      {
+        if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
+          return Builder.CreateFAdd(lhs,rhs,"fadd_tmp");
+        else //for int or bool
+          return Builder.CreateAdd(lhs,rhs,"iadd_tmp");
+      }
+      else if(Opcode == "-") //MINUS
+      {
+        if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
+          return Builder.CreateFSub(lhs,rhs,"fsub_tmp");
+        else //for int or bool
+          return Builder.CreateSub(lhs,rhs,"isub_tmp");
+      }
+      else if(Opcode == "*") //MULT
+      {
+        if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
+          return Builder.CreateFMul(lhs,rhs,"fmul_tmp");
+        else //for int or bool
+          return Builder.CreateMul(lhs,rhs,"imul_tmp");
+      }
+      else if(Opcode == "/") //DIV - print error for zero division
+      {
+        if(rhs == ConstantInt::get(TheContext, APInt(32,int(0),false)) | rhs == ConstantInt::get(TheContext, APInt(1,int(false),false)) | rhs == ConstantFP::get(TheContext, APFloat(float(0.0))))
+        {
+          errs()<<"Semantic error: Division by zero not permitted.\n";
+          return nullptr;
+        }
+
+        if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
+          return Builder.CreateFDiv(lhs,rhs,"fdiv_tmp");
+        else //for int or bool
+          return Builder.CreateSDiv(lhs,rhs,"idiv_tmp");
+      }
+      else if(Opcode == "%") //MOD - check if both operands are not float!
+      {
+        if(rhs == ConstantInt::get(TheContext, APInt(32,int(0),false)) | rhs == ConstantInt::get(TheContext, APInt(1,int(false),false)) | rhs == ConstantFP::get(TheContext, APFloat((float)0.0)))
+        {
+          errs()<<"Semantic error: Taking remainder of division with zero not permitted.\n";
+          return nullptr;
+        }
+
+        if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
+          return Builder.CreateFRem(lhs,rhs,"fmod_tmp");
+        else //for int or bool
+          return Builder.CreateSRem(lhs,rhs,"imod_tmp");
+      }
+      else if(Opcode == "==") //EQ
+      {
+        if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
+          return Builder.CreateFCmpOEQ(lhs,rhs,"feq_tmp");
+        else //for int or bool
+          return Builder.CreateICmpEQ(lhs,rhs,"ieq_tmp");
+      }
+       else if(Opcode == "!=") //NEQ
+      {
+        if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
+          return Builder.CreateFCmpONE(lhs,rhs,"fne_tmp");
+        else //for int or bool
+          return Builder.CreateICmpNE(lhs,rhs,"ine_tmp");
+      }
+      else if(Opcode == "<=") //LE
+      {
+        if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
+          return Builder.CreateFCmpOLE(lhs,rhs,"fle_tmp");
+        else if(rhs->getType()->isIntegerTy(1) & lhs->getType()->isIntegerTy(1)) //bool
+        {
+          lhs = Builder.CreateIntCast(lhs, Type::getInt32Ty(TheContext), false);
+          rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
+        }
+       
+        return Builder.CreateICmpSLE(lhs,rhs,"ile_tmp");
+      }
+      else if(Opcode == "<") //LT
+      {
+        if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
+          return Builder.CreateFCmpOLT(lhs,rhs,"flt_tmp");
+        else if(rhs->getType()->isIntegerTy(1) & lhs->getType()->isIntegerTy(1)) //bool
+        {
+          lhs = Builder.CreateIntCast(lhs, Type::getInt32Ty(TheContext), false);
+          rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
+        }
+        return Builder.CreateICmpSLT(lhs,rhs,"ilt_tmp");
+      }
+      else if(Opcode == ">=") //GE
+      {
+        if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
+          return Builder.CreateFCmpOGE(lhs,rhs,"fge_tmp");
+        else if(rhs->getType()->isIntegerTy(1) & lhs->getType()->isIntegerTy(1)) //bool
+        {
+          lhs = Builder.CreateIntCast(lhs, Type::getInt32Ty(TheContext), false);
+          rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
+        }
+        return Builder.CreateICmpSGE(lhs,rhs,"ige_tmp");
+      }
+      else if(Opcode == ">") //GT
+      {
+        if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
+          return Builder.CreateFCmpOGT(lhs,rhs,"fgt_tmp");
+        else if(rhs->getType()->isIntegerTy(1) & lhs->getType()->isIntegerTy(1)) //bool
+        {
+          lhs = Builder.CreateIntCast(lhs, Type::getInt32Ty(TheContext), false);
+          rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
+        }
+        return Builder.CreateICmpSGT(lhs,rhs,"igt_tmp");
+      }
+      else
+        return nullptr;
+  
+  //return nullptr;
 }
 
 Value* FuncCallASTnode::codegen(){
@@ -3477,7 +3909,7 @@ Value* FuncCallASTnode::codegen(){
   std::vector<Value *> ArgsV;
   for (unsigned i = 0, e = Args.size(); i != e; ++i) 
   {
-    //Need to check if type for each argument is correct!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //Need to check if type for each argument is correct!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! - not needed we are widening the size
 
     ArgsV.push_back(Args[i]->codegen());
     if (!ArgsV.back())
@@ -3668,6 +4100,7 @@ if (!TheFunction)
  }
 
  string returnType = "";
+ bool returnSet = false;
   if(TheFunction->getReturnType()->isIntegerTy(32))
     returnType = "int"; //    returnType = "int (i32)";
   else if(TheFunction->getReturnType()->isIntegerTy(1))
@@ -3683,23 +4116,28 @@ if(Body.size() == 0)//empty function body
       return nullptr;
     }
   else
+  {
     Builder.CreateRetVoid();
+    returnSet = true;
+  }
 }
 
 for(int i = 0; i < Body.size(); i++)
 {
+  if(returnSet) //do not generate further instructions after the return statement
+    break;
+
   Value *RetVal = Body.at(i)->codegen(); //go through all ASTnodes in this function body and run codegen()
   if(!RetVal)
   {
     return nullptr;
   }
   
-  if(i == Body.size()-1)
+  if((i == Body.size()-1) | isa<ReturnInst>(RetVal)) //check if last ASTnode of function body or check if a return expression has been made in the body early
   {
-    //make sure retvoid is built if the function is of void type
     if((TheFunction->getReturnType()->isVoidTy()))
     {
-      Builder.CreateRetVoid();
+      Builder.CreateRetVoid(); //create void return for void functions
     }
     else
     { 
@@ -3731,6 +4169,7 @@ for(int i = 0; i < Body.size(); i++)
             return nullptr;
           }
         }
+        returnSet = true; //make sure last line is a return stmt
       }
       else //return statement not found
       {
@@ -3824,7 +4263,8 @@ int main(int argc, char **argv) {
     /*IR Code Generator - this operates while traversing AST nodes*/
     if(root[i]->codegen() == nullptr)
     {
-      return 0; 
+      errs()<<"IR code generation failed.\n";
+      return 1; 
     }
 
     if(i == root.size() - 1)
