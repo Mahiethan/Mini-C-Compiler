@@ -6,7 +6,7 @@ On DCS workstations, run this command to set up the correct version of GCC and L
 ```bash
 source setup.sh
 ```
-New additions:
+<ins>New additions:</ins>
 
 - Lexical analyser runs before parser
     - The lexical analyser checks that there are no invalid tokens before the parsing can start
@@ -24,3 +24,7 @@ New additions:
     - Because it gives undefined behaviour (refer to LLVM reference manual for srem function)
 - Logical Not (!) operator is performed in using extraneous instructions (CreateNot is not used)
     - Still gives correct answer but worth mentioning in the report about this inefficiency.
+- Added boolean short circuit code generation (lazy evaluation) for logical operators || and &&
+    - If LHS of an || expression is true, whole expression evaluates to true, no need to produce codegen() of RHS
+    - If LHS of an && expression is false, whole expression evaluates to false,
+    no need to produce codegen() of RHS

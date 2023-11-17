@@ -73,6 +73,8 @@ entry:
   %unary = alloca float, align 4
   %not = alloca i32, align 4
   %combo = alloca float, align 4
+  %comboTwo = alloca float, align 4
+  %comboThree = alloca float, align 4
   store i32 0, ptr %retval, align 4
   br i1 false, label %lor.end, label %lor.rhs
 
@@ -83,6 +85,7 @@ lor.end:                                          ; preds = %lor.rhs, %entry
   %0 = phi i1 [ true, %entry ], [ true, %lor.rhs ]
   %frombool = zext i1 %0 to i8
   store i8 %frombool, ptr %or, align 1
+  store i8 1, ptr %or, align 1
   br i1 true, label %land.rhs, label %land.end
 
 land.rhs:                                         ; preds = %lor.end
@@ -92,6 +95,7 @@ land.end:                                         ; preds = %land.rhs, %lor.end
   %1 = phi i1 [ false, %lor.end ], [ false, %land.rhs ]
   %frombool1 = zext i1 %1 to i8
   store i8 %frombool1, ptr %and, align 1
+  store i8 0, ptr %and, align 1
   store float 1.000000e+00, ptr %eq, align 4
   store i8 0, ptr %neq, align 1
   store i8 1, ptr %le, align 1
@@ -117,8 +121,23 @@ land.end:                                         ; preds = %land.rhs, %lor.end
   %4 = load i32, ptr %not, align 4
   %add = add nsw i32 %lnot.ext, %4
   store i32 %add, ptr %not, align 4
-  store float 0xC11927C240000000, ptr %combo, align 4
+  br i1 false, label %land.rhs2, label %land.end3
+
+land.rhs2:                                        ; preds = %land.end
+  br label %land.end3
+
+land.end3:                                        ; preds = %land.rhs2, %land.end
+  %5 = phi i1 [ false, %land.end ], [ true, %land.rhs2 ]
+  %land.ext = zext i1 %5 to i32
+  %conv = sitofp i32 %land.ext to double
+  %add4 = fadd double 0xC0AA9B2F684BDA13, %conv
+  %conv5 = fptrunc double %add4 to float
+  store float %conv5, ptr %combo, align 4
+  store float 0x3F7EFBBD60000000, ptr %combo, align 4
+  store float 0.000000e+00, ptr %combo, align 4
   store float 1.000000e+00, ptr %combo, align 4
+  store float 0.000000e+00, ptr %comboTwo, align 4
+  store float 1.000000e+00, ptr %comboThree, align 4
   store float 5.000000e+00, ptr %combo, align 4
   %call = call i32 @ret(float noundef 1.000000e+00)
   ret i32 %call

@@ -210,6 +210,9 @@ int main()
     int not;
 
     float combo;
+    float comboTwo;
+    float comboThree;
+
     // b = 10;
     // // a = -r;
     // a = --b; //in mini-c, this is double negate, in normal c, this is decrement (not in mini-c grammar)
@@ -233,6 +236,7 @@ int main()
     // or = 0 || true; //true
     // or = 34.0 || 0.0; //true
     or = 0.0 || 2; //true
+    or = 10 || false; //true
 
     // // or1 = or;
     // // or2 = or;
@@ -240,6 +244,7 @@ int main()
     // //testing and
 
     and = 0.00001 && 0.0; //false
+    and = false && true && true; //false
 
     // // //testing eq
 
@@ -306,11 +311,19 @@ int main()
 
     // //test combo
 
-    combo = (5 + 4 * 89 / (124 % 66) * (54.0 != 340)) + ((6546.0 / 54.0) * -34 * (100/true)); //0xC11927C240000000
-    combo = (5 + 4 * 89 / (124 % 66) * (54.0 != 340)) || ((6546.0 / 54.0) * -34 * (100/true)); //1.0
+    combo = (5 + 4 * 89 / 124 % 66 * (54.0 != 340)) + (54.2 / 54.0) * -34 * 100/true + (0.0 && 50/50); //0xC0AA9B2F80000000 (due to lack of precision, testOne produced a double that truncates to a value very similar)
+    combo = ((5 + 4 * 89 / 124 % 66 * (54.0 != 340)) || (6546.0 / 54.0) * -34 * 100/true)/132.2; //0x3F7EEFC240000000
+    combo = 0 && (5 + 4 * 89 / 124 % 66 * (54.0 != 340)) + (6546.0 / 54.0) * -34 * 100/true + (0.0 && 50/50); //0.0
+    combo = true || (5 + 4 * 89 / 124 % 66 * (54.0 != 340)) + (6546.0 / 54.0) * -34 * 100/true + (0.0 && 50/50); //1.0
+    comboTwo = 0 && ((5 + 4 * 89 / 124 % 66 * (54.0 != 340)) + (6546.0 / 54.0) * -34 * 100/true + (0.0 && 50/50)); //0.0
+    comboThree = true || ((5 + 4 * 89 / 124 % 66 * (54.0 != 340)) + (6546.0 / 54.0) * -34 * 100/true + (0.0 && 50/50)); //1.0
 
 
-    combo = ((5) + 4 * 3 % 3); //gives 5
+
+
+
+
+    combo = ((5) + 4 * false % 3); //gives 5.0
 
     // float c;
     // float e;

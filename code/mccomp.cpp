@@ -3541,6 +3541,17 @@ Value* UnaryExprASTnode::codegen()
 Value* BinaryExprASTnode::codegen(){
   cout<<"Binary codegen\n";
   Value* lhs = LHS->codegen();
+  //boolean short circuit code generation for logical operators || and &&
+  if(Opcode == "&&")
+  {
+    if(lhs == ConstantInt::get(TheContext, APInt(1,int(false),false))) //return false if lhs is false
+      return ConstantInt::get(TheContext, APInt(1,int(false),false));
+  }
+  else if(Opcode == "||")
+  {
+    if(lhs == ConstantInt::get(TheContext, APInt(1,int(true),false))) //return true if lhs is true
+      return ConstantInt::get(TheContext, APInt(1,int(true),false));
+  }
   Value* rhs = RHS->codegen();
 
   bool isLHSAlloca = true;

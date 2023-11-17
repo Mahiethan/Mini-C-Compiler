@@ -45,6 +45,8 @@ entry:
 
 define i32 @main() {
 entry:
+  %comboThree = alloca float, align 4
+  %comboTwo = alloca float, align 4
   %combo = alloca float, align 4
   %not = alloca i32, align 4
   %unary = alloca float, align 4
@@ -64,6 +66,8 @@ entry:
   %or1 = alloca i32, align 4
   %or = alloca i1, align 1
   store i1 true, ptr %or, align 1
+  store i1 true, ptr %or, align 1
+  store i1 false, ptr %and, align 1
   store i1 false, ptr %and, align 1
   store float 1.000000e+00, ptr %eq, align 4
   store i1 false, ptr %neq, align 1
@@ -90,8 +94,12 @@ entry:
   %0 = zext i1 %not_temp to i32
   %iadd_tmp = add i32 %0, %load_temp2
   store i32 %iadd_tmp, ptr %not, align 4
-  store float 0xC11927C240000000, ptr %combo, align 4
+  store float 0xC0AA9B2F80000000, ptr %combo, align 4
+  store float 0x3F7EFBBD60000000, ptr %combo, align 4
+  store float 0.000000e+00, ptr %combo, align 4
   store float 1.000000e+00, ptr %combo, align 4
+  store float 0.000000e+00, ptr %comboTwo, align 4
+  store float 1.000000e+00, ptr %comboThree, align 4
   store float 5.000000e+00, ptr %combo, align 4
   %call_tmp = call i32 @ret(i1 true)
   ret i32 %call_tmp
