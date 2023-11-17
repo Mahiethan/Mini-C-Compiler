@@ -3404,7 +3404,8 @@ static LLVMContext TheContext;
 static IRBuilder<> Builder(TheContext);
 static std::unique_ptr<Module> TheModule;
 
-static std::map<std::string, AllocaInst*> NamedValues;
+static vector<map<string,AllocaInst*>> NamedValuesList;
+// static std::map<std::string, AllocaInst*> NamedValues;
 static map<string,GlobalVariable*> GlobalVariables;
 
 static AllocaInst* CreateEntryBlockAlloca(Function *TheFunction, const std::string &VarName, string type) {
@@ -3441,6 +3442,9 @@ Value *VariableASTnode::codegen() {
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
   AllocaInst* varAlloca = CreateEntryBlockAlloca(TheFunction, Val, Type);
   //store in NamedValues
+  std::map<std::string, AllocaInst*> NamedValues = NamedValuesList.back();
+  NamedValuesList.pop_back();
+
   
   if(NamedValues.insert({Val,varAlloca}).second == false) //check if symbol table already contains same variable name
   {
@@ -3456,13 +3460,17 @@ Value *VariableASTnode::codegen() {
     return nullptr;
   }
   //Value* var = Builder.CreateLoad(Type::getInt32Ty(TheContext), varAlloca, Val);
+  NamedValuesList.push_back(NamedValues);
   return varAlloca;
 }
 
 Value *VariableReferenceASTnode::codegen() {
   // Look this variable up in the function.
   cout<<"VarRef codegen\n";
+
+  std::map<std::string, AllocaInst*> NamedValues = NamedValuesList.back();
   AllocaInst *V = NamedValues[Name];
+
   if(!V)
   {
     //check if its a global variable instead
@@ -3696,6 +3704,7 @@ Value* BinaryExprASTnode::codegen(){
       if(name != "")
       {
         // cout<<"name:"<<name<<endl;
+        std::map<std::string, AllocaInst*> NamedValues = NamedValuesList.back();
         AllocaInst *V = NamedValues[name];
         if(!V)
         {
@@ -4187,7 +4196,10 @@ if (!TheFunction)
  BasicBlock *BB = BasicBlock::Create(TheContext, "entry", TheFunction);
  Builder.SetInsertPoint(BB);
  // Record the function arguments in the NamedValues map.
- NamedValues.clear();
+//  NamedValues.clear();
+ std::map<std::string, AllocaInst*> NamedValues;
+
+
 
  for (auto &Arg : TheFunction->args()) //loading each argument in the symbol table
  {
@@ -4208,6 +4220,8 @@ if (!TheFunction)
     Builder.CreateStore(&Arg, Alloca);
     NamedValues[std::string(Arg.getName())] = Alloca;
  }
+
+ NamedValuesList.push_back(NamedValues);
 
  string returnType = "";
  bool returnSet = false;
@@ -4294,6 +4308,8 @@ for(int i = 0; i < Body.size(); i++)
 // Validate the generated code, checking
 //for consistency.
  verifyFunction(*TheFunction);
+
+ NamedValuesList.pop_back(); //remove NamedValues of this function from the vector
 
  return TheFunction;
 

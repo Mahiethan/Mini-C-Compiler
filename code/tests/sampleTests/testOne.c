@@ -165,9 +165,10 @@ bool test(int a, float b, bool c)
 {
     float test;
     bool aaa;
+    // int aaa; //redefinition
     test = 5.0;
     aaa = false;
-    // return 1; //add appropriate casting for return!!
+    // return 1; //adds appropriate casting for return
     return aaa;
 }
 
@@ -213,6 +214,8 @@ int main()
     float combo;
     float comboTwo;
     float comboThree;
+
+    // float comboThree; //redefiniton
 
     // b = 10;
     // // a = -r;
