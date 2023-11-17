@@ -28,6 +28,8 @@ entry:
   store float %b, ptr %b.addr, align 4
   %frombool = zext i1 %c to i8
   store i8 %frombool, ptr %c.addr, align 1
+  store float 5.000000e+00, ptr %test, align 4
+  store i8 0, ptr %aaa, align 1
   %0 = load i8, ptr %aaa, align 1
   %tobool = trunc i8 %0 to i1
   ret i1 %tobool
@@ -69,16 +71,16 @@ entry:
   %div = alloca float, align 4
   %mult = alloca float, align 4
   %unary = alloca float, align 4
-  %not = alloca float, align 4
+  %not = alloca i32, align 4
   %combo = alloca float, align 4
   store i32 0, ptr %retval, align 4
-  br i1 true, label %lor.end, label %lor.rhs
+  br i1 false, label %lor.end, label %lor.rhs
 
 lor.rhs:                                          ; preds = %entry
   br label %lor.end
 
 lor.end:                                          ; preds = %lor.rhs, %entry
-  %0 = phi i1 [ true, %entry ], [ false, %lor.rhs ]
+  %0 = phi i1 [ true, %entry ], [ true, %lor.rhs ]
   %frombool = zext i1 %0 to i8
   store i8 %frombool, ptr %or, align 1
   br i1 true, label %land.rhs, label %land.end
@@ -91,21 +93,33 @@ land.end:                                         ; preds = %land.rhs, %lor.end
   %frombool1 = zext i1 %1 to i8
   store i8 %frombool1, ptr %and, align 1
   store float 1.000000e+00, ptr %eq, align 4
-  store i8 1, ptr %neq, align 1
-  store i8 0, ptr %le, align 1
+  store i8 0, ptr %neq, align 1
+  store i8 1, ptr %le, align 1
   store i8 0, ptr %lt, align 1
   store i8 1, ptr %ge, align 1
   store i8 1, ptr %gt, align 1
   store float 1.000000e+00, ptr %plus, align 4
-  store float 1.000000e+00, ptr %minus, align 4
-  store float 0.000000e+00, ptr %mult, align 4
-  store float 0x40590AE140000000, ptr %div, align 4
+  store float -9.000000e+00, ptr %minus, align 4
+  store float 9.200000e+01, ptr %mult, align 4
   store float 0.000000e+00, ptr %div, align 4
   store float 0.000000e+00, ptr %mod, align 4
   store float -1.000000e+02, ptr %unary, align 4
-  store float 0.000000e+00, ptr %not, align 4
+  %2 = load float, ptr %unary, align 4
+  %fneg = fneg float %2
+  store float %fneg, ptr %combo, align 4
+  store float %fneg, ptr %unary, align 4
+  store i32 -1, ptr %not, align 4
+  store i32 0, ptr %not, align 4
+  %3 = load float, ptr %unary, align 4
+  %tobool = fcmp une float %3, 0.000000e+00
+  %lnot = xor i1 %tobool, true
+  %lnot.ext = zext i1 %lnot to i32
+  %4 = load i32, ptr %not, align 4
+  %add = add nsw i32 %lnot.ext, %4
+  store i32 %add, ptr %not, align 4
   store float 0xC11927C240000000, ptr %combo, align 4
   store float 1.000000e+00, ptr %combo, align 4
+  store float 5.000000e+00, ptr %combo, align 4
   %call = call i32 @ret(float noundef 1.000000e+00)
   ret i32 %call
 }

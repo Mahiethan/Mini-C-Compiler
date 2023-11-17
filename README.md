@@ -22,3 +22,5 @@ New additions:
     - Because it gives undefined behaviour (refer to LLVM reference manual for sdiv function)
 - Zero modulo operation also not permitted for all types
     - Because it gives undefined behaviour (refer to LLVM reference manual for srem function)
+- Logical Not (!) operator is performed in using extraneous instructions (CreateNot is not used)
+    - Still gives correct answer but worth mentioning in the report about this inefficiency.

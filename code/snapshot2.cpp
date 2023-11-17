@@ -3474,18 +3474,11 @@ Value *VariableReferenceASTnode::codegen() {
    return V;
 }
 
-Value* UnaryExprASTnode::codegen()
-{ 
+Value* UnaryExprASTnode::codegen(){ //DONE
   cout<<"Unary codegen\n";
   Value* operand = Operand->codegen();
-
   if(operand == nullptr)
     return nullptr;
-
-  if(auto *AI = dyn_cast<AllocaInst>(operand))
-  {
-    operand = Builder.CreateLoad(AI->getAllocatedType(),operand,"load_temp");
-  }
 
   string type = "";
 
@@ -3502,7 +3495,7 @@ Value* UnaryExprASTnode::codegen()
     type = "float";
   }
 
-  if(Opcode == "!") //talk about how this is done with extraneous instructions but still gives correct answer 
+  if(Opcode == "!")
   {
     if(type == "float")
     {
@@ -3527,11 +3520,9 @@ Value* UnaryExprASTnode::codegen()
     else if(type == "float") //do a subtraction with 0
     {
       float zero = 0.0;
-      return Builder.CreateFNeg(operand,"fneg_temp");
+      return Builder.CreateFSub(ConstantFP::get(TheContext,APFloat(zero)),operand);
     }
     return Builder.CreateNeg(operand,"neg_temp");
-    // return Builder.CreateSub(ConstantInt::get(TheContext,APInt(32,0,true)),operand,"neg_temp");//fneg not used (only flips sign bit)
-
   }
   else
     return nullptr;
@@ -3543,64 +3534,67 @@ Value* BinaryExprASTnode::codegen(){
   Value* lhs = LHS->codegen();
   Value* rhs = RHS->codegen();
 
-  bool isLHSAlloca = true;
+  AllocaInst* lhsPointer;
+  AllocaInst* rhsPointer;
 
   if(lhs == nullptr | rhs == nullptr)
     return nullptr;
 
+  // string lhsType = "";
+  // string rhsType = "";
+
+  // if(lhs->getType()->isIntegerTy(32))
+  //   lhsType = "int";
+  // else if(lhs->getType()->isIntegerTy(1))
+  //   lhsType = "bool";
+  // else if(lhs->getType()->isFloatTy())
+  //   lhsType = "float";
+
+  // if(rhs->getType()->isIntegerTy(32))
+  //   rhsType = "int";
+  // else if(rhs->getType()->isIntegerTy(1))
+  //   rhsType = "bool";
+  // else if(rhs->getType()->isFloatTy())
+  //   rhsType = "float";
+
+  if(auto *AI = dyn_cast<AllocaInst>(lhs))
+  {
+        cout<<"Alloca\n";
+
+    if(AI->getAllocatedType()->isFloatTy())
+      lhs = Builder.CreateLoad(Type::getFloatTy(TheContext), AI);
+    else if(AI->getAllocatedType()->isIntegerTy(32))
+      lhs = Builder.CreateLoad(Type::getInt32Ty(TheContext), AI);
+    else if(AI->getAllocatedType()->isIntegerTy(1))
+      lhs = Builder.CreateLoad(Type::getInt1Ty(TheContext), AI);
+    //ptrtype, AI
+    lhsPointer = AI;
+  }
+
+  if(auto *AI = dyn_cast<AllocaInst>(rhs))
+  {
+    cout<<"Alloca\n";
+    if(AI->getAllocatedType()->isFloatTy())
+      rhs = Builder.CreateLoad(Type::getFloatTy(TheContext), AI);
+    else if(AI->getAllocatedType()->isIntegerTy(32))
+      rhs = Builder.CreateLoad(Type::getInt32Ty(TheContext), AI);
+    else if(AI->getAllocatedType()->isIntegerTy(1))
+      rhs = Builder.CreateLoad(Type::getInt1Ty(TheContext), AI);
+    
+    rhsPointer = AI;
+  }
 
   int lhsType = 0;
   int rhsType = 0;
   string lhsTypeStr = "";
   string rhsTypeStr = "";
 
-  if(Opcode != "=") //load LHS if it is not an assign operation
-  {
-    cout<<"alloca\n";
-    if(auto *AI = dyn_cast<AllocaInst>(lhs))
-    {
-      if(AI->getAllocatedType()->isFloatTy())
-        lhs = Builder.CreateLoad(Type::getFloatTy(TheContext), AI, "load_temp");
-      else if(AI->getAllocatedType()->isIntegerTy(32))
-        lhs = Builder.CreateLoad(Type::getInt32Ty(TheContext), AI, "load_temp");
-      else if(AI->getAllocatedType()->isIntegerTy(1))
-        lhs = Builder.CreateLoad(Type::getInt1Ty(TheContext), AI, "load_temp");
-      //ptrtype, AI
-    }  
-
-      if(lhs->getType()->isIntegerTy(32))
-        lhsType = 1;
-      else if(lhs->getType()->isIntegerTy(1))
-        lhsType = 0;
-      else if(lhs->getType()->isFloatTy())
-        lhsType = 2;
-  }
-  else //keep LHS as an alloca and get its type
-  {
-    if(auto *AI = dyn_cast<AllocaInst>(lhs))
-    {
-      cout<<"lhs Alloca\n";
-      if(AI->getAllocatedType()->isFloatTy())
-        lhsType = 2;
-      else if(AI->getAllocatedType()->isIntegerTy(32))
-        lhsType = 1;
-      else if(AI->getAllocatedType()->isIntegerTy(1))
-        lhsType = 0;
-      //ptrtype, AI
-    }
-  }
-
-  if(auto *AI = dyn_cast<AllocaInst>(rhs)) //load RHS
-  {
-    cout<<"rhs Alloca\n";
-    if(AI->getAllocatedType()->isFloatTy())
-      rhs = Builder.CreateLoad(Type::getFloatTy(TheContext), AI, "load_temp");
-    else if(AI->getAllocatedType()->isIntegerTy(32))
-      rhs = Builder.CreateLoad(Type::getInt32Ty(TheContext), AI, "load_temp");
-    else if(AI->getAllocatedType()->isIntegerTy(1))
-      rhs = Builder.CreateLoad(Type::getInt1Ty(TheContext), AI,"load_temp");
-  }
-
+  if(lhs->getType()->isIntegerTy(32))
+    lhsType = 1;
+  else if(lhs->getType()->isIntegerTy(1))
+    lhsType = 0;
+  else if(lhs->getType()->isFloatTy())
+    lhsType = 2;
 
   if(rhs->getType()->isIntegerTy(32))
     rhsType = 1;
@@ -3627,6 +3621,29 @@ Value* BinaryExprASTnode::codegen(){
 
   cout<<"lhsType: "<<lhsTypeStr<<endl;
   cout<<"rhsType: "<<rhsTypeStr<<endl;
+
+  // if(lhsType < rhsType)
+  //     {
+  //       errs()<<"Semantic error: Widening conversion not possible from RHS type "<<lhsTypeStr<<" to LHS type "<<rhsTypeStr<<"\n";
+  //       return nullptr;
+  //     }
+  //     else if(lhsType > rhsType)
+  //     {
+  //         Builder.CreateSExt(rhs,lhs->getType(),"zext_temp");
+  //     }
+
+  // if(lhsType > rhsType)
+  // {
+  //   Value* rhsNew = Builder.CreateSExt(rhs,lhs->getType(),"zext_temp");
+  //   rhs = Builder.CreateLoad(rhsNew->getType(),rhsNew,"sext_temp");
+  // }
+
+  // if(lhsType > rhsType)
+  // {
+  //     // rhs = Builder.CreateSExt(rhs,lhs->getType(),"zext_temp");
+  //     rhs = Builder.CreateBitCast(rhs,lhs->getType(),"cast_temp");
+
+  // }
   
     //Modify for different types
     if(Opcode == "=") //ASSIGN
@@ -3676,16 +3693,15 @@ Value* BinaryExprASTnode::codegen(){
         {
             // rhs = Builder.CreateSExt(rhs,lhs->getType(),"zext_temp");
             cout<<"casting eq\n";
-
             if(lhsType == 2) //to float
             {
               if(rhsType == 0) //bool to float
               {
                 rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
-                rhs = Builder.CreateCast(Instruction::SIToFP,rhs,Type::getFloatTy(TheContext),"btof_cast");
+                rhs = Builder.CreateCast(Instruction::SIToFP,rhs,lhs->getType());
               }
               else //int to float
-                rhs = Builder.CreateCast(Instruction::SIToFP,rhs,Type::getFloatTy(TheContext),"itof_cast");
+                rhs = Builder.CreateCast(Instruction::SIToFP,rhs,lhs->getType());
             }
             else if(lhsType == 1) //bool to int
               rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
@@ -3706,31 +3722,28 @@ Value* BinaryExprASTnode::codegen(){
 
     if(isLogical == true)
     {
-      cout<<"Casting for logical operators\n";
-              // cout<<lhsType<<endl;
-
       //set both operands to boolean type, for AND, OR operators.
-
             if(lhsType == 2)
             {
               // lhs = Builder.CreateIntCast(lhs, Type::getInt32Ty(TheContext), false);
               // lhs = Builder.CreateCast(Instruction::FPToSI,lhs,Type::getInt32Ty(TheContext));
               // lhsType = 1;
               lhs = Builder.CreateFCmpONE(lhs, ConstantFP::get(TheContext, APFloat((float) 0.0)),"bool_cast");
+              lhsType = 0;
 
             }
-
             if(rhsType == 2)
             {
               // rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
               // rhs = Builder.CreateCast(Instruction::FPToSI,rhs,Type::getInt32Ty(TheContext));
               // rhsType = 1;
               rhs = Builder.CreateFCmpONE(rhs, ConstantFP::get(TheContext, APFloat((float) 0.0)),"bool_cast");
+              rhsType = 0;
             }
             
-            if(lhsType == 1)
+            if(lhsType != 0)
               lhs = Builder.CreateICmpNE(lhs, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"bool_cast");
-            if(rhsType == 1)
+            if(rhsType != 0)
               rhs = Builder.CreateICmpNE(rhs, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"bool_cast");
 
             lhsType = 0;
@@ -3935,7 +3948,7 @@ Value* FuncCallASTnode::codegen(){
   if(CalleeF->getReturnType()->isVoidTy())
     return Builder.CreateCall(CalleeF, ArgsV); //void functions cannot have a name
   else
-    return Builder.CreateCall(CalleeF, ArgsV, "call_tmp"); 
+    return Builder.CreateCall(CalleeF, ArgsV, "calltmp"); 
     // return nullptr;
 }
 
@@ -3953,16 +3966,10 @@ Value* ReturnExprASTnode::codegen(){
   // return nullptr;
   cout<<"Return codegen\n";
   Value* returnExpr = ReturnExpr->codegen();
-
-  if(returnExpr == nullptr)
+  if(returnExpr != nullptr)
+    return Builder.CreateRet(returnExpr);
+  else
     return nullptr;
-
-  if(auto *AI = dyn_cast<AllocaInst>(returnExpr))
-  {
-    returnExpr = Builder.CreateLoad(AI->getAllocatedType(),returnExpr,"load_temp");
-  }
-
-  return Builder.CreateRet(returnExpr);
 }
 
 Function* PrototypeAST::codegen(){
@@ -4155,7 +4162,7 @@ for(int i = 0; i < Body.size(); i++)
     return nullptr;
   }
   
-  if((i == Body.size()-1) | isa<ReturnInst>(RetVal)) //check last ASTnode of function body or check for a return expression that has been made in the body early
+  if((i == Body.size()-1) | isa<ReturnInst>(RetVal)) //check if last ASTnode of function body or check if a return expression has been made in the body early
   {
     if((TheFunction->getReturnType()->isVoidTy()))
     {

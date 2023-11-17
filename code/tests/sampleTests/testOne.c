@@ -153,7 +153,7 @@ float asd()
     // bool b;
     // b = true;
     //a = 5;
-    return a;
+    return a; 
     // fun();
 }
 
@@ -165,8 +165,9 @@ bool test(int a, float b, bool c)
 {
     float test;
     bool aaa;
-    // test = 5.0;
-    // aaa = false;
+    test = 5.0;
+    aaa = false;
+    // return 1; //add appropriate casting for return!!
     return aaa;
 }
 
@@ -206,7 +207,7 @@ int main()
     float div;
     float mult;
     float unary;
-    float not;
+    int not;
 
     float combo;
     // b = 10;
@@ -231,75 +232,85 @@ int main()
     // or = 0.0||0.0; //false
     // or = 0 || true; //true
     // or = 34.0 || 0.0; //true
-    or = 0.03 || 0.000; //true
+    or = 0.0 || 2; //true
 
-    // or1 = or;
-    // or2 = or;
+    // // or1 = or;
+    // // or2 = or;
 
-    //testing and
+    // //testing and
 
-    and = 0.00001 && 0.0;
+    and = 0.00001 && 0.0; //false
 
-    //testing eq
+    // // //testing eq
 
-    eq = 234.4 == 234.4;
+    eq = 234.4 == 234.4; //true
 
-    //testing neq
+    // // //testing neq
 
-    neq = 0.0 != 54.0;
+    neq = 54 != 54.0; //false
 
-    //testing le
+    // // //testing le
 
-    le = true <= false;
+    le = true <= 10.0; //true
 
-    //testing lt
+    // // //testing lt
 
-    lt = true < false; 
+    lt = true < false;  //false
 
-    //testing ge
+    // //testing ge
 
-    ge = true >= false;
+    ge = 0.0 >= false; //true
 
-    //testing gt
+    // //testing gt
 
      gt = true > false;
 
-    //testing plus
+    // //testing plus
 
-    plus = true + false;
+    plus = true + false; //1.0
 
-    //testing minus
+    // //testing minus
 
-    minus = true - false - false;
+    minus = true - false - 10; //1 - 0 - 10 = -9
 
-    //testing mult
+    // //testing mult
 
-    mult = true * true * false;
+    mult = true * true * 92; //92.0
+    // mult = 10.0;
 
-    //testing div
+    // mult = false * mult; //0
 
-    div = 200.34 / 2; //div by 0
-    div = false / true;
+    // // //testing div
 
-    //testing mod
+    // div = 200.34 / 0; //div by 0 not permitted
+    div = false / true; // 0.0
 
-    mod = 345 % 5;
+    // //testing mod
 
-    //test unary
+    // mod = 2132.0 % 0.1; //0x3FB99784A0000000 //clang -emit-llvm thinks these are doubles and gives error (fmod only works with floats not doubles)
+    mod = 123 % 3;
+    // mod = 345 % 0; //mod by 0 not permitted
 
-    unary = -100.0;
+    // //test unary
 
-    //test not
+    unary = -100.0; //-100.0
 
-    not = !2324.23;
+    unary = combo = -unary;
 
-    //test combo
+    // //test not
+
+    not = -!0.0; //-1
+    not = -!1; //0
+
+    not = !unary + not;
+
+    // //test combo
 
     combo = (5 + 4 * 89 / (124 % 66) * (54.0 != 340)) + ((6546.0 / 54.0) * -34 * (100/true)); //0xC11927C240000000
     combo = (5 + 4 * 89 / (124 % 66) * (54.0 != 340)) || ((6546.0 / 54.0) * -34 * (100/true)); //1.0
 
 
-    // combo = ((5) + 4 * 3 % 3); //gives 5
+    combo = ((5) + 4 * 3 % 3); //gives 5
 
     // float c;
     // float e;
