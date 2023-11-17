@@ -92,8 +92,8 @@ entry:
   %not_temp = xor i1 %bool_cast, true
   %load_temp2 = load i32, ptr %not, align 4
   %0 = zext i1 %not_temp to i32
-  %iadd_tmp = add i32 %0, %load_temp2
-  store i32 %iadd_tmp, ptr %not, align 4
+  %add_tmp = add i32 %0, %load_temp2
+  store i32 %add_tmp, ptr %not, align 4
   store float 0xC0AA9B2F80000000, ptr %combo, align 4
   store float 0x3F7EFBBD60000000, ptr %combo, align 4
   store float 0.000000e+00, ptr %combo, align 4
@@ -101,6 +101,5 @@ entry:
   store float 0.000000e+00, ptr %comboTwo, align 4
   store float 1.000000e+00, ptr %comboThree, align 4
   store float 5.000000e+00, ptr %combo, align 4
-  %call_tmp = call i32 @ret(i1 true)
-  ret i32 %call_tmp
+  ret i32 0
 }

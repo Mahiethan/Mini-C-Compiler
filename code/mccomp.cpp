@@ -471,6 +471,7 @@ public:
   virtual Value *codegen() = 0;
   virtual std::string to_string() const {return "";};
   virtual std::string getName() const {return "";};
+  virtual TOKEN getTok() const {return {};};
 };
 
 /// IntASTnode - Class for integer literals like 1, 2, 10,
@@ -482,6 +483,9 @@ class IntASTnode : public ASTnode {
 public:
   IntASTnode(TOKEN tok, int val) : Val(val), Tok(tok) {}
   virtual Value *codegen() override;
+  virtual TOKEN getTok() const override{
+    return Tok;
+  }
   virtual std::string to_string() const override {
   //return a string representation of this AST node
     string final = "IntegerLiteral: " + std::to_string(Val);
@@ -501,6 +505,9 @@ class FloatASTnode : public ASTnode {
 public:
   FloatASTnode(TOKEN tok, float val) : Val(val), Tok(tok) {}
   virtual Value *codegen() override;
+  virtual TOKEN getTok() const override{
+    return Tok;
+  }
   virtual std::string to_string() const override {
   //return a string representation of this AST node
     string final = "FloatLiteral: " + std::to_string(Val);
@@ -518,6 +525,9 @@ class BoolASTnode : public ASTnode {
 public:
   BoolASTnode(TOKEN tok, bool val) : Val(val), Tok(tok) {}
   virtual Value *codegen() override;
+  virtual TOKEN getTok() const override{
+    return Tok;
+  }
   virtual std::string to_string() const override {
   //return a string representation of this AST node
     string boolVal = Val == true ? "true" : "false";
@@ -545,6 +555,9 @@ class VariableASTnode : public ASTnode{
     return Type;
   }
   virtual Value *codegen() override;
+  virtual TOKEN getTok() const override{
+    return Tok;
+  }
   // virtual AllocaInst *codegen() override;
   virtual std::string to_string() const override {
   //return a sting representation of this AST node
@@ -563,6 +576,9 @@ class VariableReferenceASTnode : public ASTnode{
   public:
   VariableReferenceASTnode(TOKEN tok, string name) : Name(name), Tok(tok) {}
   virtual Value *codegen() override;
+  virtual TOKEN getTok() const override{
+    return Tok;
+  }
   std::string getName() const override{ return Name; }
   virtual std::string to_string() const override {
   //return a sting representation of this AST node
@@ -716,12 +732,17 @@ public:
 /// ReturnExprASTnode - Expression class for return statements
 class ReturnExprASTnode : public ASTnode {
   std::unique_ptr<ASTnode> ReturnExpr;
+  string FuncReturnType;
+  TOKEN Tok;
 
 public:
-  ReturnExprASTnode(std::unique_ptr<ASTnode> returnExpr)
-      : ReturnExpr(std::move(returnExpr)) {}
+  ReturnExprASTnode(std::unique_ptr<ASTnode> returnExpr, string funcReturnType, TOKEN tok)
+      : ReturnExpr(std::move(returnExpr)), FuncReturnType(funcReturnType), Tok(tok) {}
 
   virtual Value *codegen() override;
+  virtual TOKEN getTok() const override{
+    return Tok;
+  }
   virtual std::string to_string() const override {
   //return a string representation of this AST node
     string returnExpr = "";
@@ -729,7 +750,7 @@ public:
     if(ReturnExpr != nullptr)
       final = "ReturnStmt\n" + addIndent() + "--> " + ReturnExpr->to_string();
     else
-       final = "ReturnStmt: empty" ;
+       final = "ReturnStmt: " + FuncReturnType;
     
     return final;
   };
@@ -1117,6 +1138,7 @@ void addFunctionAST()
   unique_ptr<PrototypeAST> Proto = std::make_unique<PrototypeAST>(prototypeName,std::move(argumentList));
   resetArgumentList();
   resetPrototypeName();
+  resetFunctiontype();
   unique_ptr<FunctionAST> Func = std::make_unique<FunctionAST>(std::move(Proto),std::move(body));
   resetBody();
   root.push_back(std::move(Func));
@@ -1189,7 +1211,11 @@ unique_ptr<ASTnode> processStmtList()
   {
     // return std::move(curr.second);
     unique_ptr<ASTnode> returnExpr = processStmtList();
-    return make_unique<ReturnExprASTnode>(std::move(returnExpr));
+    TOKEN returnTok = nullToken;
+    if(returnExpr != nullptr)
+      returnTok = returnExpr->getTok();
+    unique_ptr<ReturnExprASTnode> prototypeNode = make_unique<ReturnExprASTnode>(std::move(returnExpr),functiontype, returnTok);
+    return std::move(prototypeNode);
   }
   else return std::move(nullptr);
 } 
@@ -3683,7 +3709,7 @@ Value* BinaryExprASTnode::codegen(){
           errs()<<"Semantic error: Widening conversion not possible from RHS type "<<rhsTypeStr<<" to LHS type "<<lhsTypeStr<<"\n";
           return nullptr;
         }
-        else if(lhsType > rhsType)
+        else if(lhsType > rhsType)//perform widening conversions
         {
             // rhs = Builder.CreateSExt(rhs,lhs->getType(),"zext_temp");
             cout<<"casting eq\n";
@@ -3699,7 +3725,7 @@ Value* BinaryExprASTnode::codegen(){
                 rhs = Builder.CreateCast(Instruction::SIToFP,rhs,Type::getFloatTy(TheContext),"itof_cast");
             }
             else if(lhsType == 1) //bool to int
-              rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
+              rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false, "btoi_cast");
  
         }
           return Builder.CreateStore(rhs,lhs);
@@ -3812,21 +3838,21 @@ Value* BinaryExprASTnode::codegen(){
         if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
           return Builder.CreateFAdd(lhs,rhs,"fadd_tmp");
         else //for int or bool
-          return Builder.CreateAdd(lhs,rhs,"iadd_tmp");
+          return Builder.CreateAdd(lhs,rhs,"add_tmp");
       }
       else if(Opcode == "-") //MINUS
       {
         if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
           return Builder.CreateFSub(lhs,rhs,"fsub_tmp");
         else //for int or bool
-          return Builder.CreateSub(lhs,rhs,"isub_tmp");
+          return Builder.CreateSub(lhs,rhs,"sub_tmp");
       }
       else if(Opcode == "*") //MULT
       {
         if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
           return Builder.CreateFMul(lhs,rhs,"fmul_tmp");
         else //for int or bool
-          return Builder.CreateMul(lhs,rhs,"imul_tmp");
+          return Builder.CreateMul(lhs,rhs,"mul_tmp");
       }
       else if(Opcode == "/") //DIV - print error for zero division
       {
@@ -3839,7 +3865,7 @@ Value* BinaryExprASTnode::codegen(){
         if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
           return Builder.CreateFDiv(lhs,rhs,"fdiv_tmp");
         else //for int or bool
-          return Builder.CreateSDiv(lhs,rhs,"idiv_tmp");
+          return Builder.CreateSDiv(lhs,rhs,"div_tmp");
       }
       else if(Opcode == "%") //MOD - check if both operands are not float!
       {
@@ -3852,21 +3878,21 @@ Value* BinaryExprASTnode::codegen(){
         if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
           return Builder.CreateFRem(lhs,rhs,"fmod_tmp");
         else //for int or bool
-          return Builder.CreateSRem(lhs,rhs,"imod_tmp");
+          return Builder.CreateSRem(lhs,rhs,"mod_tmp");
       }
       else if(Opcode == "==") //EQ
       {
         if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
           return Builder.CreateFCmpOEQ(lhs,rhs,"feq_tmp");
         else //for int or bool
-          return Builder.CreateICmpEQ(lhs,rhs,"ieq_tmp");
+          return Builder.CreateICmpEQ(lhs,rhs,"eq_tmp");
       }
        else if(Opcode == "!=") //NEQ
       {
         if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
           return Builder.CreateFCmpONE(lhs,rhs,"fne_tmp");
         else //for int or bool
-          return Builder.CreateICmpNE(lhs,rhs,"ine_tmp");
+          return Builder.CreateICmpNE(lhs,rhs,"ne_tmp");
       }
       else if(Opcode == "<=") //LE
       {
@@ -3878,7 +3904,7 @@ Value* BinaryExprASTnode::codegen(){
           rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
         }
        
-        return Builder.CreateICmpSLE(lhs,rhs,"ile_tmp");
+        return Builder.CreateICmpSLE(lhs,rhs,"le_tmp");
       }
       else if(Opcode == "<") //LT
       {
@@ -3889,7 +3915,7 @@ Value* BinaryExprASTnode::codegen(){
           lhs = Builder.CreateIntCast(lhs, Type::getInt32Ty(TheContext), false);
           rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
         }
-        return Builder.CreateICmpSLT(lhs,rhs,"ilt_tmp");
+        return Builder.CreateICmpSLT(lhs,rhs,"lt_tmp");
       }
       else if(Opcode == ">=") //GE
       {
@@ -3900,7 +3926,7 @@ Value* BinaryExprASTnode::codegen(){
           lhs = Builder.CreateIntCast(lhs, Type::getInt32Ty(TheContext), false);
           rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
         }
-        return Builder.CreateICmpSGE(lhs,rhs,"ige_tmp");
+        return Builder.CreateICmpSGE(lhs,rhs,"ge_tmp");
       }
       else if(Opcode == ">") //GT
       {
@@ -3911,7 +3937,7 @@ Value* BinaryExprASTnode::codegen(){
           lhs = Builder.CreateIntCast(lhs, Type::getInt32Ty(TheContext), false);
           rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
         }
-        return Builder.CreateICmpSGT(lhs,rhs,"igt_tmp");
+        return Builder.CreateICmpSGT(lhs,rhs,"gt_tmp");
       }
       else
         return nullptr;
@@ -3963,7 +3989,13 @@ Value* WhileExprASTnode::codegen(){
 Value* ReturnExprASTnode::codegen(){
   // return nullptr;
   cout<<"Return codegen\n";
+  if(ReturnExpr == nullptr)
+  {
+    return Builder.CreateRetVoid();
+  }
   Value* returnExpr = ReturnExpr->codegen();
+
+  // cout<<"FUNC RETURN: "<<FuncReturnType<<endl;
 
   if(returnExpr == nullptr)
     return nullptr;
@@ -3971,6 +4003,51 @@ Value* ReturnExprASTnode::codegen(){
   if(auto *AI = dyn_cast<AllocaInst>(returnExpr))
   {
     returnExpr = Builder.CreateLoad(AI->getAllocatedType(),returnExpr,"load_temp");
+  }
+
+  string correctType = FuncReturnType;
+  string actualType = "";
+  if(returnExpr->getType()->isIntegerTy(32))
+    actualType = "int";
+  else if(returnExpr->getType()->isIntegerTy(1))
+    actualType = "bool";
+  else if(returnExpr->getType()->isFloatTy())
+    actualType = "float";
+  
+  if(correctType != actualType)
+  {
+    if(actualType == "float")
+    {
+      errs()<<"Semantic Error: Incorrect return type `"<<actualType<<"` used in line no: "<<Tok.lineNo<<" column no: "<<Tok.columnNo<<". Cannot cast to expected return type `"<<correctType<<"`.\n";
+      return nullptr;
+    }
+    else if(actualType == "int")
+    {
+      if(correctType == "float")
+      {
+        errs()<<"Warning: Incorrect return type `"<<actualType<<"` used in line no: "<<Tok.lineNo<<" column no: "<<Tok.columnNo<<". Casting to expected return type `"<<correctType<<"`.\n";
+        returnExpr = Builder.CreateCast(Instruction::SIToFP,returnExpr,Type::getFloatTy(TheContext),"itof_cast");
+      }
+      else //bool
+      {
+        errs()<<"Semantic Error: Incorrect return type `"<<actualType<<"` used in line no: "<<Tok.lineNo<<" column no: "<<Tok.columnNo<<". Cannot cast to expected return type `"<<correctType<<"`.\n";
+        return nullptr;
+      }
+    }
+    else if(actualType == "bool")
+    {
+      if(correctType == "float")
+      {
+        errs()<<"Warning: Incorrect return type `"<<actualType<<"` used in line no: "<<Tok.lineNo<<" column no: "<<Tok.columnNo<<". Casting to expected return type `"<<correctType<<"`.\n";
+        returnExpr = Builder.CreateIntCast(returnExpr, Type::getInt32Ty(TheContext), false);
+        returnExpr = Builder.CreateCast(Instruction::SIToFP,returnExpr,Type::getFloatTy(TheContext),"btof_cast");
+      }
+      else //int
+      {
+        errs()<<"Warning: Incorrect return type `"<<actualType<<"` used in line no: "<<Tok.lineNo<<" column no: "<<Tok.columnNo<<". Casting to expected return type `"<<correctType<<"`.\n";
+        returnExpr = Builder.CreateIntCast(returnExpr, Type::getInt32Ty(TheContext), false, "btoi_cast");
+      }
+    }
   }
 
   return Builder.CreateRet(returnExpr);
@@ -4168,40 +4245,40 @@ for(int i = 0; i < Body.size(); i++)
   
   if((i == Body.size()-1) | isa<ReturnInst>(RetVal)) //check last ASTnode of function body or check for a return expression that has been made in the body early
   {
-    if((TheFunction->getReturnType()->isVoidTy()))
-    {
-      Builder.CreateRetVoid(); //create void return for void functions
-    }
-    else
-    { 
+    // if((TheFunction->getReturnType()->isVoidTy()))
+    // {
+    //   Builder.CreateRetVoid(); //create void return for void functions
+    // }
+    // else
+    // { 
       if(auto RT = dyn_cast<ReturnInst>(RetVal)) //if last statement is a return statement
       {
-        Value* returnVal = RT->getReturnValue(); 
-        //checking if the return statement is the correct type - matches the return type of the function
-        if(returnVal->getType()->isIntegerTy(32))
-        {
-          if(returnType != "int")
-          {
-            cout<<"Semantic Error: Incorrect return value of type `int` used in function: "<<Proto->getName()<<".\nExpected return type `"<<returnType<<"`.\n";
-            return nullptr;
-          }
-        }
-        if(returnVal->getType()->isIntegerTy(1)) 
-        {
-          if(returnType != "bool")
-          {
-            cout<<"Semantic Error: Incorrect return value of type `bool` used in function: "<<Proto->getName()<<".\nExpected return type `"<<returnType<<"`.\n";
-            return nullptr;
-          }
-        }
-        if(returnVal->getType()->isFloatTy())
-        {
-          if(returnType != "float")
-          {
-            cout<<"Semantic Error: Incorrect return value of type `float` used in function: "<<Proto->getName()<<".\nExpected return type `"<<returnType<<"`.\n";
-            return nullptr;
-          }
-        }
+        // Value* returnVal = RT->getReturnValue(); 
+        // //checking if the return statement is the correct type - matches the return type of the function
+        // if(returnVal->getType()->isIntegerTy(32))
+        // {
+        //   if(returnType != "int")
+        //   {
+        //     cout<<"Semantic Error: Incorrect return value of type `int` used in function: "<<Proto->getName()<<".\nExpected return type `"<<returnType<<"`.\n";
+        //     return nullptr;
+        //   }
+        // }
+        // if(returnVal->getType()->isIntegerTy(1)) 
+        // {
+        //   if(returnType != "bool")
+        //   {
+        //     cout<<"Semantic Error: Incorrect return value of type `bool` used in function: "<<Proto->getName()<<".\nExpected return type `"<<returnType<<"`.\n";
+        //     return nullptr;
+        //   }
+        // }
+        // if(returnVal->getType()->isFloatTy())
+        // {
+        //   if(returnType != "float")
+        //   {
+        //     cout<<"Semantic Error: Incorrect return value of type `float` used in function: "<<Proto->getName()<<".\nExpected return type `"<<returnType<<"`.\n";
+        //     return nullptr;
+        //   }
+        // }
         returnSet = true; //make sure last line is a return stmt
       }
       else //return statement not found
@@ -4209,7 +4286,6 @@ for(int i = 0; i < Body.size(); i++)
         cout<<"Semantic Error: Return statement of type `"<<returnType<<"` expected in function: "<<Proto->getName()<<".\n";
         return nullptr;
       }
-    }
   
   }
   
@@ -4293,7 +4369,7 @@ int main(int argc, char **argv) {
   llvm::outs() << "root"<< "\n|\n";
   for(int i = 0; i < root.size(); i++)
   {
-    /*IR Code Generator - this operates while traversing AST nodes*/
+    ///IR Code Generator - this operates while traversing AST nodes
     if(root[i]->codegen() == nullptr)
     {
       errs()<<"IR code generation failed.\n";

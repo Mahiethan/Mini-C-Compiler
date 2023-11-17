@@ -139,8 +139,7 @@ land.end3:                                        ; preds = %land.rhs2, %land.en
   store float 0.000000e+00, ptr %comboTwo, align 4
   store float 1.000000e+00, ptr %comboThree, align 4
   store float 5.000000e+00, ptr %combo, align 4
-  %call = call i32 @ret(float noundef 1.000000e+00)
-  ret i32 %call
+  ret i32 0
 }
 
 attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }

@@ -22,9 +22,10 @@ source setup.sh
     - Because it gives undefined behaviour (refer to LLVM reference manual for sdiv function)
 - Zero modulo operation also not permitted for all types
     - Because it gives undefined behaviour (refer to LLVM reference manual for srem function)
-- Logical Not (!) operator is performed in using extraneous instructions (CreateNot is not used)
-    - Still gives correct answer but worth mentioning in the report about this inefficiency.
 - Added boolean short circuit code generation (lazy evaluation) for logical operators || and &&
     - If LHS of an || expression is true, whole expression evaluates to true, no need to produce codegen() of RHS
     - If LHS of an && expression is false, whole expression evaluates to false,
     no need to produce codegen() of RHS
+- Widening conversions are also applied to return statements
+    - The return types can be widened to the correct type with a warning
+    - If the type cannot be widened to the correct type, a semantic error occurs

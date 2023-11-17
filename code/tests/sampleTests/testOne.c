@@ -174,11 +174,12 @@ bool test(int a, float b, bool c)
 void tester(int v)
 {
     // int as;
+    return;
 }
 
 int ret(float h)
 {
-    return 0;
+    return false;
 }
 
 //ret(5.0); //func call outside block not allowed
@@ -338,7 +339,9 @@ int main()
     // combo = ! -0.0; 
 
 
-    return ret(true); //widen parameter size if its not a float
+    // return ret(true); //widen parameter size if its not a float
+    // return 0.0; //gives error as expected
+    return false; //will be widened to i32 0
 
     //IR not generated for folling lines of code
     a = 100;
