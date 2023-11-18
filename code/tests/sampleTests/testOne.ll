@@ -3,10 +3,10 @@ source_filename = "testOne.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-redhat-linux-gnu"
 
+@o = dso_local global i32 0, align 4
 @a = dso_local global i32 0, align 4
 @b = dso_local global float 0.000000e+00, align 4
 @c = dso_local global i8 0, align 1
-@o = dso_local global i32 0, align 4
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local float @asd() #0 {
@@ -55,89 +55,27 @@ entry:
 define dso_local i32 @main() #0 {
 entry:
   %retval = alloca i32, align 4
-  %or = alloca i8, align 1
-  %or1 = alloca i32, align 4
-  %or2 = alloca float, align 4
-  %and = alloca i8, align 1
-  %eq = alloca float, align 4
-  %neq = alloca i8, align 1
-  %le = alloca i8, align 1
-  %lt = alloca i8, align 1
-  %ge = alloca i8, align 1
-  %gt = alloca i8, align 1
-  %plus = alloca float, align 4
-  %minus = alloca float, align 4
-  %mod = alloca float, align 4
-  %div = alloca float, align 4
-  %mult = alloca float, align 4
-  %unary = alloca float, align 4
-  %not = alloca i32, align 4
   %combo = alloca float, align 4
-  %comboTwo = alloca float, align 4
-  %comboThree = alloca float, align 4
+  %ty = alloca i32, align 4
+  %ty2 = alloca float, align 4
   store i32 0, ptr %retval, align 4
-  br i1 false, label %lor.end, label %lor.rhs
+  %0 = load i32, ptr @o, align 4
+  store i32 %0, ptr %ty, align 4
+  %1 = load i32, ptr %ty, align 4
+  %conv = sitofp i32 %1 to float
+  %cmp = fcmp oeq float %conv, 0x3FF19999A0000000
+  br i1 %cmp, label %if.then, label %if.end
 
-lor.rhs:                                          ; preds = %entry
-  br label %lor.end
+if.then:                                          ; preds = %entry
+  store float 1.000000e+01, ptr %ty2, align 4
+  store i32 4, ptr @o, align 4
+  br label %if.end
 
-lor.end:                                          ; preds = %lor.rhs, %entry
-  %0 = phi i1 [ true, %entry ], [ true, %lor.rhs ]
-  %frombool = zext i1 %0 to i8
-  store i8 %frombool, ptr %or, align 1
-  store i8 1, ptr %or, align 1
-  br i1 true, label %land.rhs, label %land.end
-
-land.rhs:                                         ; preds = %lor.end
-  br label %land.end
-
-land.end:                                         ; preds = %land.rhs, %lor.end
-  %1 = phi i1 [ false, %lor.end ], [ false, %land.rhs ]
-  %frombool1 = zext i1 %1 to i8
-  store i8 %frombool1, ptr %and, align 1
-  store i8 0, ptr %and, align 1
-  store float 1.000000e+00, ptr %eq, align 4
-  store i8 0, ptr %neq, align 1
-  store i8 1, ptr %le, align 1
-  store i8 0, ptr %lt, align 1
-  store i8 1, ptr %ge, align 1
-  store i8 1, ptr %gt, align 1
-  store float 1.000000e+00, ptr %plus, align 4
-  store float -9.000000e+00, ptr %minus, align 4
-  store float 9.200000e+01, ptr %mult, align 4
-  store float 0.000000e+00, ptr %div, align 4
-  store float 0.000000e+00, ptr %mod, align 4
-  store float -1.000000e+02, ptr %unary, align 4
-  %2 = load float, ptr %unary, align 4
-  %fneg = fneg float %2
-  store float %fneg, ptr %combo, align 4
-  store float %fneg, ptr %unary, align 4
-  store i32 -1, ptr %not, align 4
-  store i32 0, ptr %not, align 4
-  %3 = load float, ptr %unary, align 4
-  %tobool = fcmp une float %3, 0.000000e+00
-  %lnot = xor i1 %tobool, true
-  %lnot.ext = zext i1 %lnot to i32
-  %4 = load i32, ptr %not, align 4
-  %add = add nsw i32 %lnot.ext, %4
-  store i32 %add, ptr %not, align 4
-  br i1 false, label %land.rhs2, label %land.end3
-
-land.rhs2:                                        ; preds = %land.end
-  br label %land.end3
-
-land.end3:                                        ; preds = %land.rhs2, %land.end
-  %5 = phi i1 [ false, %land.end ], [ true, %land.rhs2 ]
-  %land.ext = zext i1 %5 to i32
-  %conv = sitofp i32 %land.ext to double
-  %add4 = fadd double 0xC0AA9B2F684BDA13, %conv
-  %conv5 = fptrunc double %add4 to float
-  store float %conv5, ptr %combo, align 4
-  store float 0x3F7EFBBD60000000, ptr %combo, align 4
-  store float 0.000000e+00, ptr %combo, align 4
-  store float 1.000000e+00, ptr %combo, align 4
-  store float 0.000000e+00, ptr %comboTwo, align 4
-  store float 1.000000e+00, ptr %comboThree, align 4
+if.end:                                           ; preds = %if.then, %entry
+  %2 = load i32, ptr @o, align 4
+  %sub = sub nsw i32 %2, -9
+  %conv3 = sitofp i32 %sub to float
+  store float %conv3, ptr %combo, align 4
   store float 5.000000e+00, ptr %combo, align 4
   ret i32 0
 }

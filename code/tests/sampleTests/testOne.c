@@ -193,27 +193,27 @@ int main()
     // int a;
     // int b;
     // int c;
-    bool or;
-    int or1;
-    float or2;
-    bool and;
-    float eq;
-    bool neq;
-    bool le;
-    bool lt; 
-    bool ge;
-    bool gt;
-    float plus;
-    float minus;
-    float mod;
-    float div;
-    float mult;
-    float unary;
-    int not;
+    // bool or;
+    // int or1;
+    // float or2;
+    // bool and;
+    // float eq;
+    // bool neq;
+    // bool le;
+    // bool lt; 
+    // bool ge;
+    // bool gt;
+    // float plus;
+    // float minus;
+    // float mod;
+    // float div;
+    // float mult;
+    // float unary;
+    // int not;
 
     float combo;
-    float comboTwo;
-    float comboThree;
+    // float comboTwo;
+    // float comboThree;
 
     // float comboThree; //redefiniton
 
@@ -239,94 +239,109 @@ int main()
     // or = 0.0||0.0; //false
     // or = 0 || true; //true
     // or = 34.0 || 0.0; //true
-    or = 0.0 || 2; //true
-    or = 10 || false; //true
+    // or = 0.0 || 2; //true
+    // or = 10 || false; //true
 
-    // // or1 = or;
-    // // or2 = or;
+    // // // or1 = or;
+    // // // or2 = or;
 
-    // //testing and
+    // // //testing and
 
-    and = 0.00001 && 0.0; //false
-    and = false && true && true; //false
+    // and = 0.00001 && 0.0; //false
+    // and = false && true && true; //false
 
-    // // //testing eq
+    // // // //testing eq
 
-    eq = 234.4 == 234.4; //true
+    // eq = 234.4 == 234.4; //true
 
-    // // //testing neq
+    // // // //testing neq
 
-    neq = 54 != 54.0; //false
+    // neq = 54 != 54.0; //false
 
-    // // //testing le
+    // // // //testing le
 
-    le = true <= 10.0; //true
+    // le = true <= 10.0; //true
 
-    // // //testing lt
+    // // // //testing lt
 
-    lt = true < false;  //false
+    // lt = true < false;  //false
 
-    // //testing ge
+    // // //testing ge
 
-    ge = 0.0 >= false; //true
+    // ge = 0.0 >= false; //true
 
-    // //testing gt
+    // // //testing gt
 
-     gt = true > false;
+    //  gt = true > false;
 
-    // //testing plus
+    // // //testing plus
 
-    plus = true + false; //1.0
+    // plus = true + false; //1.0
 
-    // //testing minus
+    // // //testing minus
 
-    minus = true - false - 10; //1 - 0 - 10 = -9
+    // minus = true - false - 10; //1 - 0 - 10 = -9
 
-    // //testing mult
+    // // //testing mult
 
-    mult = true * true * 92; //92.0
-    // mult = 10.0;
+    // mult = true * true * 92; //92.0
+    // // mult = 10.0;
 
-    // mult = false * mult; //0
+    // // mult = false * mult; //0
 
-    // // //testing div
+    // // // //testing div
 
-    // div = 200.34 / 0; //div by 0 not permitted
-    div = false / true; // 0.0
+    // // div = 200.34 / 0; //div by 0 not permitted
+    // div = false / true; // 0.0
 
-    // //testing mod
+    // // //testing mod
 
-    // mod = 2132.0 % 0.1; //0x3FB99784A0000000 //clang -emit-llvm thinks these are doubles and gives error (fmod only works with floats not doubles)
-    mod = 123 % 3;
-    // mod = 345 % 0; //mod by 0 not permitted
+    // // mod = 2132.0 % 0.1; //0x3FB99784A0000000 //clang -emit-llvm thinks these are doubles and gives error (fmod only works with floats not doubles)
+    // mod = 123 % 3;
+    // // mod = 345 % 0; //mod by 0 not permitted
 
-    // //test unary
+    // // //test unary
 
-    unary = -100.0; //-100.0
+    // unary = -100.0; //-100.0
 
-    unary = combo = -unary;
+    // unary = combo = -unary;
 
-    // //test not
+    // // //test not
 
-    not = -!0.0; //-1
-    not = -!1; //0
+    // not = -!0.0; //-1
+    // not = -!1; //0
 
-    not = !unary + not;
+    // not = !unary + not;
 
-    // //test combo
+    // // //test combo
 
-    combo = (5 + 4 * 89 / 124 % 66 * (54.0 != 340)) + (54.2 / 54.0) * -34 * 100/true + (0.0 && 50/50); //0xC0AA9B2F80000000 (due to lack of precision, testOne produced a double that truncates to a value very similar)
-    combo = ((5 + 4 * 89 / 124 % 66 * (54.0 != 340)) || (6546.0 / 54.0) * -34 * 100/true)/132.2; //0x3F7EEFC240000000
-    combo = 0 && (5 + 4 * 89 / 124 % 66 * (54.0 != 340)) + (6546.0 / 54.0) * -34 * 100/true + (0.0 && 50/50); //0.0
-    combo = true || (5 + 4 * 89 / 124 % 66 * (54.0 != 340)) + (6546.0 / 54.0) * -34 * 100/true + (0.0 && 50/50); //1.0
-    comboTwo = 0 && ((5 + 4 * 89 / 124 % 66 * (54.0 != 340)) + (6546.0 / 54.0) * -34 * 100/true + (0.0 && 50/50)); //0.0
-    comboThree = true || ((5 + 4 * 89 / 124 % 66 * (54.0 != 340)) + (6546.0 / 54.0) * -34 * 100/true + (0.0 && 50/50)); //1.0
+    // combo = (5 + 4 * 89 / 124 % 66 * (54.0 != 340)) + (54.2 / 54.0) * -34 * 100/true + (0.0 && 50/50); //0xC0AA9B2F80000000 (due to lack of precision, testOne produced a double that truncates to a value very similar)
+    // combo = ((5 + 4 * 89 / 124 % 66 * (54.0 != 340)) || (6546.0 / 54.0) * -34 * 100/true)/132.2; //0x3F7EEFC240000000
+    // combo = 0 && (5 + 4 * 89 / 124 % 66 * (54.0 != 340)) + (6546.0 / 54.0) * -34 * 100/true + (0.0 && 50/50); //0.0
+    // combo = true || (5 + 4 * 89 / 124 % 66 * (54.0 != 340)) + (6546.0 / 54.0) * -34 * 100/true + (0.0 && 50/50); //1.0
+    // comboTwo = 0 && ((5 + 4 * 89 / 124 % 66 * (54.0 != 340)) + (6546.0 / 54.0) * -34 * 100/true + (0.0 && 50/50)); //0.0
+    // comboThree = true || ((5 + 4 * 89 / 124 % 66 * (54.0 != 340)) + (6546.0 / 54.0) * -34 * 100/true + (0.0 && 50/50)); //1.0
+
+    int ty;
+    ty = o;
+    // combo = (ty == 1.0);
+
+    if(ty == 1.1) //for testOne.ll, add (float) in front of 1.1
+    {
+        float ty;
+        ty = 10;
+        o = 4; //global variable
+
+    }
+    // else
+    // {
+        
+    // }
 
 
 
-
-
-
+    //aaa = 100; //can't refer to variables in other functions
+    combo = o - -9; //gives 13.0
     combo = ((5) + 4 * false % 3); //gives 5.0
 
     // float c;
@@ -344,6 +359,7 @@ int main()
 
     // return ret(true); //widen parameter size if its not a float
     // return 0.0; //gives error as expected
+
     return false; //will be widened to i32 0
 
     //IR not generated for folling lines of code

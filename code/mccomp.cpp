@@ -3467,45 +3467,38 @@ Value *VariableASTnode::codegen() {
 Value *VariableReferenceASTnode::codegen() {
   // Look this variable up in the function.
   cout<<"VarRef codegen\n";
+  AllocaInst *V;
 
-  std::map<std::string, AllocaInst*> NamedValues = NamedValuesList.back();
-  AllocaInst *V = NamedValues[Name];
-
-  if(!V)
+  //iterate thru all symbol tables, starting from end
+  std::map<std::string, AllocaInst*> NamedValues;
+  int i;
+  for(i = NamedValuesList.size() - 1; i >= 0; i--)
   {
-    //check if its a global variable instead
-    GlobalVariable *GV = GlobalVariables[Name];
-    if(!GV)
+    NamedValues = NamedValuesList.at(i);
+    V = NamedValues[Name];
+    if(!V)
     {
-      errs()<<"Semantic error: Unknown variable name: "<<Name<<"\n";
-      return nullptr;
+      cout<<"Can't find "<<Name<<". Proceed with next symbol table"<<endl;
+      continue;
     }
-    else //MAYBE RETURN ALLOCAINST INSTEAD THEN MANUALLY CREATELOAD IN OTHER FUNCTIONS!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    {
-      //load the global variable
-      // if(GV->getValueType()->isFloatTy())
-      //   return Builder.CreateLoad(Type::getFloatTy(TheContext), GV, Name);
-      // else if(GV->getValueType()->isIntegerTy(32))
-      //   return Builder.CreateLoad(Type::getInt32Ty(TheContext), GV, Name);
-      // else if(GV->getValueType()->isIntegerTy(1))
-      //   return Builder.CreateLoad(Type::getInt1Ty(TheContext), GV, Name);
-      // else
-      //   return nullptr;
-      return GV;
-    }
+    else
+      return V;
+
   }
-
-
-  //load Value from allocaInst in NamedValues
-  // if(V->getAllocatedType()->isFloatTy())
-  //   return Builder.CreateLoad(Type::getFloatTy(TheContext), V, Name);
-  // else if(V->getAllocatedType()->isIntegerTy(32))
-  //   return Builder.CreateLoad(Type::getInt32Ty(TheContext), V, Name);
-  // else if(V->getAllocatedType()->isIntegerTy(1))
-  //   return Builder.CreateLoad(Type::getInt1Ty(TheContext), V, Name);
-  // else
-  //   return nullptr;
-   return V;
+  cout<<"End of all symbol tables. Checking global variables of size "<<GlobalVariables.size()<<endl;
+  
+  //check if its a global variable instead
+  GlobalVariable *GV = GlobalVariables[Name];
+  if(!GV)
+  {
+    errs()<<"Semantic error: Unknown variable name: "<<Name<<"\n";
+    return nullptr;
+  }
+  else 
+  {
+    cout<<"FOUND"<<endl;
+    return GV;
+  }
 }
 
 Value* UnaryExprASTnode::codegen()
@@ -3601,24 +3594,33 @@ Value* BinaryExprASTnode::codegen(){
 
   if(Opcode != "=") //load LHS if it is not an assign operation
   {
-    cout<<"alloca\n";
-    if(auto *AI = dyn_cast<AllocaInst>(lhs))
+    if(auto *AI = dyn_cast<AllocaInst>(lhs)) //for ordinary variable alloca
     {
+      cout<<"lhs alloca\n";
       if(AI->getAllocatedType()->isFloatTy())
         lhs = Builder.CreateLoad(Type::getFloatTy(TheContext), AI, "load_temp");
       else if(AI->getAllocatedType()->isIntegerTy(32))
         lhs = Builder.CreateLoad(Type::getInt32Ty(TheContext), AI, "load_temp");
       else if(AI->getAllocatedType()->isIntegerTy(1))
         lhs = Builder.CreateLoad(Type::getInt1Ty(TheContext), AI, "load_temp");
-      //ptrtype, AI
-    }  
 
-      if(lhs->getType()->isIntegerTy(32))
+    }  
+    else if(auto *GV = dyn_cast<GlobalVariable>(lhs)) //for global variables
+    {
+      cout<<"lhs Global\n";
+      if(GV->getValueType()->isFloatTy())
+        lhs = Builder.CreateLoad(Type::getFloatTy(TheContext), GV, "load_global_temp");
+      else if(GV->getValueType()->isIntegerTy(32))
+        lhs = Builder.CreateLoad(Type::getInt32Ty(TheContext), GV, "load_global_temp");
+      else if(GV->getValueType()->isIntegerTy(1))
+        lhs = Builder.CreateLoad(Type::getInt1Ty(TheContext), GV, "load_global_temp");
+    }
+     if(lhs->getType()->isFloatTy())
+        lhsType = 2;
+      else if(lhs->getType()->isIntegerTy(32))
         lhsType = 1;
       else if(lhs->getType()->isIntegerTy(1))
         lhsType = 0;
-      else if(lhs->getType()->isFloatTy())
-        lhsType = 2;
   }
   else //keep LHS as an alloca and get its type
   {
@@ -3631,7 +3633,16 @@ Value* BinaryExprASTnode::codegen(){
         lhsType = 1;
       else if(AI->getAllocatedType()->isIntegerTy(1))
         lhsType = 0;
-      //ptrtype, AI
+    }
+    else if(auto *GV = dyn_cast<GlobalVariable>(lhs))
+    {
+      cout<<"lhs Global\n";
+      if(GV->getValueType()->isFloatTy())
+        lhsType = 2;
+      else if(GV->getValueType()->isIntegerTy(32))
+        lhsType = 1;
+      else if(GV->getValueType()->isIntegerTy(1))
+        lhsType = 0;
     }
   }
 
@@ -3645,14 +3656,22 @@ Value* BinaryExprASTnode::codegen(){
     else if(AI->getAllocatedType()->isIntegerTy(1))
       rhs = Builder.CreateLoad(Type::getInt1Ty(TheContext), AI,"load_temp");
   }
-
-
+  else if(auto *GV = dyn_cast<GlobalVariable>(rhs)) //if RHS is a global variable
+  {
+    cout<<"rhs Global\n";
+    if(GV->getValueType()->isFloatTy())
+      rhs = Builder.CreateLoad(Type::getFloatTy(TheContext), GV, "load_global_temp");
+    else if(GV->getValueType()->isIntegerTy(32))
+      rhs = Builder.CreateLoad(Type::getInt32Ty(TheContext), GV, "load_global_temp");
+    else if(GV->getValueType()->isIntegerTy(1))
+      rhs = Builder.CreateLoad(Type::getInt1Ty(TheContext), GV, "load_global_temp");
+  }
   if(rhs->getType()->isIntegerTy(32))
-    rhsType = 1;
-  else if(rhs->getType()->isIntegerTy(1))
-    rhsType = 0;
-  else if(rhs->getType()->isFloatTy())
-    rhsType = 2;
+      rhsType = 1;
+    else if(rhs->getType()->isIntegerTy(1))
+      rhsType = 0;
+    else if(rhs->getType()->isFloatTy())
+      rhsType = 2;
 
   switch(lhsType)
   {
@@ -3703,15 +3722,16 @@ Value* BinaryExprASTnode::codegen(){
       string name = LHS->getName();
       if(name != "")
       {
-        // cout<<"name:"<<name<<endl;
-        std::map<std::string, AllocaInst*> NamedValues = NamedValuesList.back();
-        AllocaInst *V = NamedValues[name];
-        if(!V)
-        {
-          errs()<<"Semantic error: Unknown variable name: "<<name<<"\n";
-          return nullptr;
-        }
-        // else
+        // not needed
+        // // cout<<"name:"<<name<<endl;
+        // std::map<std::string, AllocaInst*> NamedValues = NamedValuesList.back();
+        // AllocaInst *V = NamedValues[name];
+        // if(!V)
+        // {
+        //   errs()<<"Semantic error: Unknown variable name: "<<name<<"\n";
+        //   return nullptr;
+        // }
+        // // else
 
         if(lhsType < rhsType)
         {
@@ -3796,6 +3816,8 @@ Value* BinaryExprASTnode::codegen(){
         int returnType = lhsType;
         if(rhsType > returnType)
           returnType = rhsType;
+
+        cout<<"Casting all to "<<returnType<<endl;
         
         if(returnType == rhsType)
         {
@@ -3987,7 +4009,70 @@ Value* FuncCallASTnode::codegen(){
 
 Value* IfExprASTnode::codegen(){
   cout<<"IfExpr codegen\n";
-  return nullptr;
+  cout<<"ELSE SIZE: "<<Else.size()<<endl;
+  bool elseExist = false;
+   if(Else.size() != 0)
+    elseExist = true;
+  
+  Function* TheFunction = Builder.GetInsertBlock()->getParent();
+  BasicBlock* true_ = BasicBlock::Create(TheContext, "then", TheFunction);
+  BasicBlock* false_;
+
+  if(elseExist)
+    false_ = BasicBlock::Create(TheContext, "else", TheFunction);
+
+  BasicBlock* end_ = BasicBlock::Create(TheContext, "end");
+  Value* cond = Cond->codegen(); //generate condition expression
+  //check type of cond - making sure it is a bool
+  if(!(cond->getType()->isIntegerTy(1)))
+  {
+    string currType = "";
+    if(cond->getType()->isIntegerTy(32))
+      currType = "int";
+    else
+      currType = "float";
+    errs()<<"Semantic error: Expected type `bool` for the condition statement at line no. "<<Cond->getTok().lineNo<<" column no. "<<Cond->getTok().columnNo<<". Cannot cast from type `"<<currType<<"` to `bool`.\n";
+    return nullptr;
+  }
+  Value* comp = Builder.CreateICmpNE(cond, ConstantInt::get(TheContext, APInt(1,0, false)), "if_cond");
+
+  if(elseExist)
+    Builder.CreateCondBr(comp, true_, false_);
+  else
+    Builder.CreateCondBr(comp,true_,end_);
+
+  Builder.SetInsertPoint(true_);
+  ///Then block
+  std::map<std::string, AllocaInst*> NamedValues_Then; //Creating symbol table for Then block
+  NamedValuesList.push_back(NamedValues_Then);
+  for(int i = 0; i < Then.size(); i++)
+  {
+    //new block - create a new symbol table
+    Value* thenVal = Then.at(i)->codegen();
+  }
+  //remove symbol table of Then block
+  NamedValuesList.pop_back();
+
+  if(elseExist)
+  {
+    Builder.SetInsertPoint(false_);
+    ///Else block
+    //new block - create a new symbol table
+    std::map<std::string, AllocaInst*> NamedValues_Else; //Creating symbol table for Else block
+    NamedValuesList.push_back(NamedValues_Else);
+    for(int i = 0; i < Else.size(); i++)
+    {
+      Value* elseVal = Else.at(i)->codegen();
+    }
+
+    //remove symbol table of Else block
+    NamedValuesList.pop_back();
+  }
+
+  TheFunction->insert(TheFunction->end(), end_);
+  Builder.CreateBr(end_);
+  Builder.SetInsertPoint(end_);
+  return ConstantPointerNull::get(PointerType::getUnqual(Type::getVoidTy(TheContext))); //return null pointer of void type
 }
 
 Value* WhileExprASTnode::codegen(){
@@ -4164,6 +4249,8 @@ Value* GlobalVariableAST::codegen(){
   }
   else
     return nullptr;
+
+  cout<<"global proceed"<<endl;
 
   GlobalVariable* g = new GlobalVariable(*(TheModule.get()),t,isConstant,GlobalValue::CommonLinkage,Constant::getNullValue(t));
   g->setAlignment(MaybeAlign(alignSize));
