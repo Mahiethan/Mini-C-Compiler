@@ -4208,7 +4208,60 @@ Value* IfExprASTnode::codegen(){
 
 Value* WhileExprASTnode::codegen(){
   cout<<"While codegen\n";
-  return nullptr;
+  Function* TheFunction = Builder.GetInsertBlock()->getParent();
+  BasicBlock* cond_ = BasicBlock::Create(TheContext, "while_cond", TheFunction);
+  BasicBlock* true_ = BasicBlock::Create(TheContext, "while_body", TheFunction);
+  BasicBlock* false_ = BasicBlock::Create(TheContext, "while_end");
+  Builder.CreateBr(cond_);
+  Builder.SetInsertPoint(cond_);
+
+  Value* cond = Cond->codegen(); //generate condition expression
+  if(cond == nullptr)
+      return nullptr;
+  //check type of cond - making sure it is a bool
+  if(!(cond->getType()->isIntegerTy(1)))
+  {
+    string currType = "";
+    if(cond->getType()->isIntegerTy(32))
+      currType = "int";
+    else
+      currType = "float";
+    errs()<<"Semantic error: Expected type `bool` for the condition statement at line no. "<<Cond->getTok().lineNo<<" column no. "<<Cond->getTok().columnNo<<". Cannot cast from type `"<<currType<<"` to `bool`.\n";
+    return nullptr;
+  }
+
+  Value* comp = Builder.CreateICmpNE(cond, ConstantInt::get(TheContext, APInt(1,0, false)), "if_cond");
+  Builder.CreateCondBr(comp, true_, false_);
+  Builder.SetInsertPoint(true_);
+  ///Then block
+  std::map<std::string, AllocaInst*> NamedValues_Then; //Creating symbol table for Then block
+  NamedValuesList.push_back(NamedValues_Then);
+
+  bool generateBranchForBody = true;
+
+  for(int i = 0; i < Then.size(); i++)
+  {
+    //new block - create a new symbol table
+    cout<<"size of then:"<<Then.size()<<endl;
+    Value* thenVal = Then.at(i)->codegen();
+    if(thenVal == nullptr)
+      return nullptr;
+    if(auto *R = dyn_cast<ReturnInst>(thenVal))
+      {
+        generateBranchForBody = false;
+        break; //don't generate IR for instructions after return
+      }
+  }
+  //remove symbol table of Then block
+  if(generateBranchForBody)
+    Builder.CreateBr(cond_);
+  NamedValuesList.pop_back();
+
+  
+  TheFunction->insert(TheFunction->end(), false_);
+  Builder.SetInsertPoint(false_);
+  return ConstantPointerNull::get(PointerType::getUnqual(Type::getVoidTy(TheContext))); //return null pointer of void type
+ 
 }
 
 Value* ReturnExprASTnode::codegen(){

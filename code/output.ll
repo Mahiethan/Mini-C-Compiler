@@ -68,7 +68,8 @@ entry:
 
 define i32 @main() {
 entry:
-  %a = alloca i32, align 4
+  %hg = alloca i32, align 4
+  %hg_o = alloca i32, align 4
   %A = alloca i32, align 4
   %flo = alloca i32, align 4
   %ty = alloca i32, align 4
@@ -76,53 +77,62 @@ entry:
   %load_global_temp = load i32, ptr @o, align 4
   store i32 %load_global_temp, ptr %ty, align 4
   %load_global_temp1 = load i32, ptr @a, align 4
-  %eq_tmp = icmp eq i32 %load_global_temp1, 1
+  %eq_tmp = icmp eq i32 %load_global_temp1, 10
   %if_cond = icmp ne i1 %eq_tmp, false
   br i1 %if_cond, label %if_then, label %if_else
 
 if_then:                                          ; preds = %entry
-  br label %if_end16
+  store i32 99, ptr %hg_o, align 4
+  br label %while_cond
 
 if_else:                                          ; preds = %entry
-  store i32 1, ptr %a, align 4
-  %load_temp = load i32, ptr %a, align 4
-  %eq_tmp4 = icmp eq i32 %load_temp, 1
-  %if_cond5 = icmp ne i1 %eq_tmp4, false
-  br i1 %if_cond5, label %if_then2, label %if_else3
+  store i32 190, ptr %flo, align 4
+  br label %if_end14
 
-if_then2:                                         ; preds = %if_else
-  store i32 1, ptr %a, align 4
-  %load_temp7 = load i32, ptr %a, align 4
-  %eq_tmp8 = icmp eq i32 %load_temp7, 3
-  %if_cond9 = icmp ne i1 %eq_tmp8, false
-  br i1 %if_cond9, label %if_then6, label %if_end
+while_cond:                                       ; preds = %if_end, %if_then
+  %load_temp = load i32, ptr %ty, align 4
+  %eq_tmp2 = icmp eq i32 %load_temp, 10
+  %if_cond3 = icmp ne i1 %eq_tmp2, false
+  br i1 %if_cond3, label %while_body, label %while_end13
 
-if_else3:                                         ; preds = %if_else
-  store i32 10, ptr @o, align 4
-  br label %if_end10
+while_body:                                       ; preds = %while_cond
+  store i32 20, ptr @o, align 4
+  %load_temp6 = load i32, ptr %ty, align 4
+  %ne_tmp = icmp ne i32 %load_temp6, 19
+  %if_cond7 = icmp ne i1 %ne_tmp, false
+  br i1 %if_cond7, label %if_then4, label %if_else5
 
-if_then6:                                         ; preds = %if_then2
+if_then4:                                         ; preds = %while_body
+  br label %while_cond8
+
+if_else5:                                         ; preds = %while_body
+  store i32 10, ptr %ty, align 4
+  store i32 0, ptr %hg_o, align 4
   br label %if_end
 
-if_end:                                           ; preds = %if_then6, %if_then2
+while_cond8:                                      ; preds = %if_then4
+  %load_global_temp10 = load i32, ptr @a, align 4
+  %eq_tmp11 = icmp eq i32 %load_global_temp10, 10
+  %if_cond12 = icmp ne i1 %eq_tmp11, false
+  br i1 %if_cond12, label %while_body9, label %while_end
+
+while_body9:                                      ; preds = %while_cond8
   ret i32 0
 
-if_end10:                                         ; preds = %if_else3
-  %load_temp12 = load i32, ptr %a, align 4
-  %eq_tmp13 = icmp eq i32 %load_temp12, 10000
-  %if_cond14 = icmp ne i1 %eq_tmp13, false
-  br i1 %if_cond14, label %if_then11, label %if_end15
+while_end:                                        ; preds = %while_cond8
+  store i32 0, ptr %hg, align 4
+  br label %if_end
 
-if_then11:                                        ; preds = %if_end10
-  br label %if_end15
+if_end:                                           ; preds = %if_else5, %while_end
+  br label %while_cond
 
-if_end15:                                         ; preds = %if_then11, %if_end10
-  store i32 999, ptr %a, align 4
-  br label %if_end16
+while_end13:                                      ; preds = %while_cond
+  store i32 10, ptr @o, align 4
+  br label %if_end14
 
-if_end16:                                         ; preds = %if_end15, %if_then
-  %load_global_temp17 = load i32, ptr @o, align 4
-  %sub_tmp = sub i32 %load_global_temp17, -9
+if_end14:                                         ; preds = %if_else, %while_end13
+  %load_global_temp15 = load i32, ptr @o, align 4
+  %sub_tmp = sub i32 %load_global_temp15, -9
   %itof_cast = sitofp i32 %sub_tmp to float
   store float %itof_cast, ptr %combo, align 4
   store float 5.000000e+00, ptr %combo, align 4

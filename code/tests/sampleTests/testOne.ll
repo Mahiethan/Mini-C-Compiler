@@ -84,64 +84,70 @@ entry:
   %ty = alloca i32, align 4
   %flo = alloca i32, align 4
   %A = alloca i32, align 4
-  %a = alloca i32, align 4
+  %hg_o = alloca i32, align 4
+  %hg = alloca i32, align 4
   store i32 0, ptr %retval, align 4
   %0 = load i32, ptr @o, align 4
   store i32 %0, ptr %ty, align 4
   %1 = load i32, ptr @a, align 4
-  %cmp = icmp eq i32 %1, 1
-  br i1 %cmp, label %if.then, label %if.else
+  %cmp = icmp eq i32 %1, 10
+  br i1 %cmp, label %if.then, label %if.else8
 
 if.then:                                          ; preds = %entry
-  br label %if.end10
+  br label %while.cond
 
-if.else:                                          ; preds = %entry
-  store i32 1, ptr %a, align 4
-  %2 = load i32, ptr %a, align 4
-  %cmp1 = icmp eq i32 %2, 1
-  br i1 %cmp1, label %if.then2, label %if.else5
+while.cond:                                       ; preds = %if.end, %if.then
+  %2 = load i32, ptr %ty, align 4
+  %cmp1 = icmp eq i32 %2, 10
+  br i1 %cmp1, label %while.body, label %while.end7
 
-if.then2:                                         ; preds = %if.else
-  store i32 0, ptr %a, align 4
-  %3 = load i32, ptr %a, align 4
-  %cmp3 = icmp eq i32 %3, 3
-  br i1 %cmp3, label %if.then4, label %if.end
+while.body:                                       ; preds = %while.cond
+  store i32 20, ptr @o, align 4
+  %3 = load i32, ptr %ty, align 4
+  %cmp2 = icmp ne i32 %3, 19
+  br i1 %cmp2, label %if.then3, label %if.else
 
-if.then4:                                         ; preds = %if.then2
+if.then3:                                         ; preds = %while.body
+  br label %while.cond4
+
+while.cond4:                                      ; preds = %while.body6, %if.then3
+  %4 = load i32, ptr @a, align 4
+  %cmp5 = icmp eq i32 %4, 10
+  br i1 %cmp5, label %while.body6, label %while.end
+
+while.body6:                                      ; preds = %while.cond4
+  %5 = load i32, ptr @a, align 4
+  %sub = sub nsw i32 %5, 1
+  store i32 %sub, ptr %hg, align 4
+  br label %while.cond4, !llvm.loop !4
+
+while.end:                                        ; preds = %while.cond4
+  store i32 0, ptr %hg, align 4
   br label %if.end
 
-if.end:                                           ; preds = %if.then4, %if.then2
-  store i32 0, ptr %retval, align 4
-  br label %return
+if.else:                                          ; preds = %while.body
+  store i32 10, ptr %ty, align 4
+  store i32 0, ptr %hg_o, align 4
+  br label %if.end
 
-if.else5:                                         ; preds = %if.else
+if.end:                                           ; preds = %if.else, %while.end
+  br label %while.cond, !llvm.loop !6
+
+while.end7:                                       ; preds = %while.cond
   store i32 10, ptr @o, align 4
-  br label %if.end6
-
-if.end6:                                          ; preds = %if.else5
-  %4 = load i32, ptr %a, align 4
-  %cmp7 = icmp eq i32 %4, 10000
-  br i1 %cmp7, label %if.then8, label %if.end9
-
-if.then8:                                         ; preds = %if.end6
   br label %if.end9
 
-if.end9:                                          ; preds = %if.then8, %if.end6
-  store i32 999, ptr %a, align 4
-  br label %if.end10
+if.else8:                                         ; preds = %entry
+  store i32 190, ptr %flo, align 4
+  br label %if.end9
 
-if.end10:                                         ; preds = %if.end9, %if.then
-  %5 = load i32, ptr @o, align 4
-  %sub = sub nsw i32 %5, -9
-  %conv = sitofp i32 %sub to float
+if.end9:                                          ; preds = %if.else8, %while.end7
+  %6 = load i32, ptr @o, align 4
+  %sub10 = sub nsw i32 %6, -9
+  %conv = sitofp i32 %sub10 to float
   store float %conv, ptr %combo, align 4
   store float 5.000000e+00, ptr %combo, align 4
-  store i32 0, ptr %retval, align 4
-  br label %return
-
-return:                                           ; preds = %if.end10, %if.end
-  %6 = load i32, ptr %retval, align 4
-  ret i32 %6
+  ret i32 0
 }
 
 attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
@@ -153,3 +159,6 @@ attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-l
 !1 = !{i32 7, !"uwtable", i32 2}
 !2 = !{i32 7, !"frame-pointer", i32 2}
 !3 = !{!"clang version 15.0.7 (Red Hat 15.0.7-1.module+el8.8.0+1144+0a4e73bd)"}
+!4 = distinct !{!4, !5}
+!5 = !{!"llvm.loop.mustprogress"}
+!6 = distinct !{!6, !5}

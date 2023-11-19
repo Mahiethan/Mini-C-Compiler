@@ -1,5 +1,5 @@
 // works
-#include <stdbool.h>
+// #include <stdbool.h>
 //cant have func decl before extern
 // int lineOne(int a, float b)
 // {
@@ -404,25 +404,41 @@ int main()
     // }
 
     //WORKS!!
-    // if(a = 10)
-    // {
-    //     while(ty == 10)
-    //     {
-    //         if(ty != 19)
-    //         {
-
-    //         }
-    //         else
-    //         {
-    //             ty = 10;
-    //         }
-    //     }
-    // }
-    // else
-    // {
-    //     test = 190;
-    // }
-
+    if(a == 10) //if_then
+    {
+        int hg_o;
+        hg_o = 99;
+        while(ty == 10) //while_cond
+        {
+            //while_body
+            o = 20;
+            if(ty != 19)//if_then4
+            {
+                int hg;
+                while(a == 10)//while_cond8
+                {
+                    //while_body9
+                    return 0;
+                    hg = a - 1;
+                }
+                //while_end
+                hg = 0;
+            }
+            else//if_else5
+            {
+                ty = 10;
+                hg_o = 0;
+            }
+            //if_end
+        }
+        //while_end13
+        o = 10;
+    }
+    else //if_else
+    {
+        flo = 190;
+    }
+    //if_end14
 
     //WORKS
     // if(flo == 1) 
@@ -469,44 +485,51 @@ int main()
     // }
 
     //WORKS
-    if(a == 1) //if_then
-    {
+    // if(a == 1) //if_then
+    // {
 
-    }
-    else //if_else
-    {
-        int a;
-        a = 1;
-        if(a == 1) //if_then2
-        {
-            a = !4; //same as a == 1
-            if(a == 3) //if_then6
-            {
+    // }
+    // else //if_else
+    // {
+    //     int a;
+    //     a = 1;
+    //     if(a == 1) //if_then2
+    //     {
+    //         a = !4; //same as a == 1
+    //         if(a == 3) //if_then6
+    //         {
 
-            }
-            return false; //if_end_0
-            a = 3; //ignored
-            if(a != 2) //ignored
-            {
-                ty = 9999;
-            }
-            else //ignored
-            {
+    //         }
+    //         return false; //if_end_0
+    //         a = 3; //ignored
+    //         if(a != 2) //ignored
+    //         {
+    //             ty = 9999;
+    //         }
+    //         else //ignored
+    //         {
 
-            }
-        }
-        else //if_else3
-        {
-            o = 10;
-        }
+    //         }
+    //     }
+    //     else //if_else3
+    //     {
+    //         o = 10;
+    //     }
 
-        if(a == 10000)//if_end10
-        {
-            //if_then11
-        }
-        a = 999; //if_end_15
-    }
+    //     if(a == 10000)//if_end10
+    //     {
+    //         //if_then11
+    //     }
+    //     a = 999; //if_end_15
+    // }
     //if_end16
+
+    // while(a == 1)
+    // {
+    //     // return 0;
+    //     o = 10;
+    //     return 0;
+    // }
 
 
 
