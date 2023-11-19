@@ -3581,9 +3581,14 @@ Value* UnaryExprASTnode::codegen()
   if(operand == nullptr)
     return nullptr;
 
+  
   if(auto *AI = dyn_cast<AllocaInst>(operand))
   {
     operand = Builder.CreateLoad(AI->getAllocatedType(),operand,"load_temp");
+  }
+  else if(auto *GV = dyn_cast<GlobalVariable>(operand))
+  {
+    operand = Builder.CreateLoad(GV->getValueType(),operand,"load_global_temp");
   }
 
   string type = "";
@@ -3603,19 +3608,24 @@ Value* UnaryExprASTnode::codegen()
 
   if(Opcode == "!") //talk about how this is done with extraneous instructions but still gives correct answer 
   {
-    if(type == "float")
-    {
-      // operand = Builder.CreateCast(Instruction::FPToSI,operand,Type::getInt32Ty(TheContext));
-      // type = "int";
-      operand = Builder.CreateFCmpONE(operand, ConstantFP::get(TheContext, APFloat((float) 0.0)),"bool_cast");
-    }
+    // if(type == "float")
+    // {
+    //   // operand = Builder.CreateCast(Instruction::FPToSI,operand,Type::getInt32Ty(TheContext));
+    //   // type = "int";
+    //   operand = Builder.CreateFCmpONE(operand, ConstantFP::get(TheContext, APFloat((float) 0.0)),"bool_cast");
+    // }
 
-    if(type == "int")
-    {
-      operand = Builder.CreateIntCast(operand, Type::getInt1Ty(TheContext), false);
-    }
+    // if(type == "int")
+    // {
+    //   operand = Builder.CreateIntCast(operand, Type::getInt1Ty(TheContext), false);
+    // }
 
-    return Builder.CreateNot(operand,"not_temp");
+    if(type == "bool")
+      return Builder.CreateNot(operand,"not_temp");
+    else
+    {
+      errs()<<"Semantic error:  Cannot cast from `"<<type<<"` to `bool` at \n";
+      return nullptr;    }
   }
   else if(Opcode == "-")
   {
@@ -3842,37 +3852,54 @@ Value* BinaryExprASTnode::codegen(){
       isLogical = true;
     }
 
-    if(isLogical == true)
+    // if(isLogical == true)
+    // {
+    //   cout<<"Casting for logical operators\n";
+    //           // cout<<lhsType<<endl;
+
+    //   //set both operands to boolean type, for AND, OR operators.
+
+    //         if(lhsType == 2)
+    //         {
+    //           // lhs = Builder.CreateIntCast(lhs, Type::getInt32Ty(TheContext), false);
+    //           // lhs = Builder.CreateCast(Instruction::FPToSI,lhs,Type::getInt32Ty(TheContext));
+    //           // lhsType = 1;
+    //           lhs = Builder.CreateFCmpONE(lhs, ConstantFP::get(TheContext, APFloat((float) 0.0)),"float_bool_cast");
+
+    //         }
+
+    //         if(rhsType == 2)
+    //         {
+    //           // rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
+    //           // rhs = Builder.CreateCast(Instruction::FPToSI,rhs,Type::getInt32Ty(TheContext));
+    //           // rhsType = 1;
+    //           rhs = Builder.CreateFCmpONE(rhs, ConstantFP::get(TheContext, APFloat((float) 0.0)),"float_bool_cast");
+    //         }
+            
+    //         if(lhsType == 1)
+    //           lhs = Builder.CreateICmpNE(lhs, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"int_bool_cast");
+    //         if(rhsType == 1)
+    //           rhs = Builder.CreateICmpNE(rhs, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"int_bool_cast");
+
+    //         lhsType = 0;
+    //         rhsType = 0;
+    // }
+   if(isLogical == true)
     {
       cout<<"Casting for logical operators\n";
-              // cout<<lhsType<<endl;
 
-      //set both operands to boolean type, for AND, OR operators.
+      if(lhsType == 2 | rhsType == 2)
+      {
+        errs()<<"Semantic error: Cannot cast from `float` to `bool` at .\n";
+        return nullptr;
+      }
 
-            if(lhsType == 2)
-            {
-              // lhs = Builder.CreateIntCast(lhs, Type::getInt32Ty(TheContext), false);
-              // lhs = Builder.CreateCast(Instruction::FPToSI,lhs,Type::getInt32Ty(TheContext));
-              // lhsType = 1;
-              lhs = Builder.CreateFCmpONE(lhs, ConstantFP::get(TheContext, APFloat((float) 0.0)),"float_bool_cast");
-
-            }
-
-            if(rhsType == 2)
-            {
-              // rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
-              // rhs = Builder.CreateCast(Instruction::FPToSI,rhs,Type::getInt32Ty(TheContext));
-              // rhsType = 1;
-              rhs = Builder.CreateFCmpONE(rhs, ConstantFP::get(TheContext, APFloat((float) 0.0)),"float_bool_cast");
-            }
-            
-            if(lhsType == 1)
-              lhs = Builder.CreateICmpNE(lhs, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"int_bool_cast");
-            if(rhsType == 1)
-              rhs = Builder.CreateICmpNE(rhs, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"int_bool_cast");
-
-            lhsType = 0;
-            rhsType = 0;
+      
+      if(lhsType == 1 | rhsType == 1)
+      {
+        errs()<<"Semantic error: Cannot cast from `int` to `bool` at .\n";
+        return nullptr;
+      }
     }
    
         if(Opcode == "||") //OR
@@ -4251,14 +4278,14 @@ Value* IfExprASTnode::codegen(){
   }
   cout<<"COND TYPE: "<<currType<<endl;
 
-  if(currType != "bool") //cast to bool type
+  if(currType != "bool")
   {
-    // errs()<<"Semantic error: Expected type `bool` for the condition statement at line no. "<<Cond->getTok().lineNo<<" column no. "<<Cond->getTok().columnNo<<". Cannot cast from type `"<<currType<<"` to `bool`.\n";
-    // return nullptr;
-    if(currType == "float")
-      cond = Builder.CreateFCmpONE(cond, ConstantFP::get(TheContext, APFloat((float) 0.0)),"float_bool_cast");   
-    else if(currType == "int")
-      cond = Builder.CreateICmpNE(cond, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"int_bool_cast");
+    errs()<<"Semantic error: Expected type `bool` for the condition statement at line no. "<<Cond->getTok().lineNo<<" column no. "<<Cond->getTok().columnNo<<". Cannot cast from type `"<<currType<<"` to `bool`.\n";
+    return nullptr;
+    // if(currType == "float")
+    //   cond = Builder.CreateFCmpONE(cond, ConstantFP::get(TheContext, APFloat((float) 0.0)),"float_bool_cast");   
+    // else if(currType == "int")
+    //   cond = Builder.CreateICmpNE(cond, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"int_bool_cast");
   }
 
   Value* comp = Builder.CreateICmpNE(cond, ConstantInt::get(TheContext, APInt(1,0,false)), "if_cond");
@@ -4400,12 +4427,12 @@ Value* WhileExprASTnode::codegen(){
 
   if(currType != "bool") //cast to bool type
   {
-    // errs()<<"Semantic error: Expected type `bool` for the condition statement at line no. "<<Cond->getTok().lineNo<<" column no. "<<Cond->getTok().columnNo<<". Cannot cast from type `"<<currType<<"` to `bool`.\n";
-    // return nullptr;
-    if(currType == "float")
-      cond = Builder.CreateFCmpONE(cond, ConstantFP::get(TheContext, APFloat((float) 0.0)),"float_bool_cast");   
-    else if(currType == "int")
-      cond = Builder.CreateICmpNE(cond, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"int_bool_cast");
+    errs()<<"Semantic error: Expected type `bool` for the condition statement at line no. "<<Cond->getTok().lineNo<<" column no. "<<Cond->getTok().columnNo<<". Cannot cast from type `"<<currType<<"` to `bool`.\n";
+    return nullptr;
+    // if(currType == "float")
+    //   cond = Builder.CreateFCmpONE(cond, ConstantFP::get(TheContext, APFloat((float) 0.0)),"float_bool_cast");   
+    // else if(currType == "int")
+    //   cond = Builder.CreateICmpNE(cond, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"int_bool_cast");
   }
 
 

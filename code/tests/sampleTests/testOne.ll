@@ -4,6 +4,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-redhat-linux-gnu"
 
 @a = dso_local global i32 0, align 4
+@globool = dso_local global i8 0, align 1
 @b = dso_local global float 0.000000e+00, align 4
 @c = dso_local global i8 0, align 1
 @o = dso_local global i32 0, align 4
@@ -144,16 +145,24 @@ if.else8:                                         ; preds = %entry
 if.end9:                                          ; preds = %if.else8, %while.end7
   call void @tester(i32 noundef 0)
   %5 = load i32, ptr %o, align 4
-  %sub = sub nsw i32 %5, -9
-  %conv = sitofp i32 %sub to float
+  %sub = sub nsw i32 0, %5
+  store i32 %sub, ptr %o, align 4
+  %6 = load i8, ptr @globool, align 1
+  %tobool = trunc i8 %6 to i1
+  %lnot = xor i1 %tobool, true
+  %lnot.ext = zext i1 %lnot to i32
+  store i32 %lnot.ext, ptr %o, align 4
+  %7 = load i32, ptr %o, align 4
+  %sub10 = sub nsw i32 %7, -9
+  %conv = sitofp i32 %sub10 to float
   store float %conv, ptr %combo, align 4
   store float 5.000000e+00, ptr %combo, align 4
   store i32 0, ptr %retval, align 4
   br label %return
 
 return:                                           ; preds = %if.end9, %while.body6
-  %6 = load i32, ptr %retval, align 4
-  ret i32 %6
+  %8 = load i32, ptr %retval, align 4
+  ret i32 %8
 }
 
 attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }

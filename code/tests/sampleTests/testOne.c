@@ -195,6 +195,7 @@ int ret(float h)
 //ret(5.0); //func call outside block not allowed
 
 int o;
+bool globool;
 // float o; //duplicate names of global variables not allowed
 int main()
 {
@@ -443,6 +444,10 @@ int main()
 
     // tester(23.2); //should give semantic error (cannot narrow)
     tester(false); //valid - param widened
+    o = -o;
+    o = !globool;
+    combo = true + 10.0;
+    // o = !o; //cannot do narrow conversion from int to bool
 
     //WORKS
     // if(flo == 1) 

@@ -5,6 +5,7 @@ source_filename = "mini-c"
 @b = common global float 0.000000e+00, align 4
 @c = common global i1 false, align 1
 @o = common global i32 0, align 4
+@globool = common global i1 false, align 1
 
 define float @asd() {
 entry:
@@ -134,7 +135,15 @@ while_end13:                                      ; preds = %while_cond
 if_end14:                                         ; preds = %if_else, %while_end13
   call void @tester(i32 0)
   %load_temp15 = load i32, ptr %o, align 4
-  %sub_tmp = sub i32 %load_temp15, -9
+  %neg_temp = sub i32 0, %load_temp15
+  store i32 %neg_temp, ptr %o, align 4
+  %load_global_temp16 = load i1, ptr @globool, align 1
+  %not_temp = xor i1 %load_global_temp16, true
+  %btoi_cast = zext i1 %not_temp to i32
+  store i32 %btoi_cast, ptr %o, align 4
+  store float 1.100000e+01, ptr %combo, align 4
+  %load_temp17 = load i32, ptr %o, align 4
+  %sub_tmp = sub i32 %load_temp17, -9
   %itof_cast = sitofp i32 %sub_tmp to float
   store float %itof_cast, ptr %combo, align 4
   store float 5.000000e+00, ptr %combo, align 4
