@@ -331,17 +331,160 @@ int main()
         float ty;
         ty = 10;
         o = 4; //global variable
-
     }
     // else
     // {
-        
+    //     bool elseVal;
+    //     elseVal = false;
+    //     o = 10;
     // }
+
+    // elseVal = true; //gives scope error
+
+    //WORKS
+    // if(ty == 100)
+    // {
+    //     while(ty == 100)
+    //     {
+    //         int flo;
+    //         if(flo == 1)
+    //         {
+    //             return true;
+    //         }
+    //         // else
+    //         // {
+    //         //     flo = false;
+    //         //     return flo;
+    //         // }
+    //         test = 999;
+    //         func(10);
+    //     }
+    //     tester = 911;
+    //     if(tester == 911)
+    //     {
+
+    //     }
+    //     else
+    //     {
+    //         t = 0;
+    //     }
+    // }
+    // else
+    // {
+    //     return false;
+    // }
+
+    //WORKS!!
+    // if(a = 10)
+    // {
+    //     while(ty == 10)
+    //     {
+    //         if(ty != 19)
+    //         {
+
+    //         }
+    //         else
+    //         {
+    //             ty = 10;
+    //         }
+    //     }
+    // }
+    // else
+    // {
+    //     test = 190;
+    // }
+
+
+    //WORKS
+    // if(flo == 1)
+    // {
+    //     if(a == 10)
+    //     {
+
+    //     }
+    //     else
+    //     {
+    //         A = 1;
+    //     }
+    //     A = 0;
+    // }
+    // else
+    // {
+    //     a = 1;
+    //     if(a == 10)
+    //     {
+
+    //     }
+    //     else //else AST node only printed if it exists 
+    //     {
+    //         // A = 1;
+    //     }
+    //     a = 0;
+    // }
+
+    //WORKS!
+    // if(a == 1)
+    // {
+    //     if(b != 1)
+    //     {
+    //     }
+    //     else
+    //     {
+    //        c = 10;
+    //     }
+    //     tester = 999;
+    // }
+    // else
+    // {
+    //     tester = 1;
+    // }
+
+    //WORKS
+    // if(a == 1)
+    // {
+
+    // }
+    // else
+    // {
+    //     int a;
+    //     a = 1;
+    //     if(a == 1)
+    //     {
+    //         a = !4;
+    //         if(a == 3)
+    //         {
+
+    //         }
+    //         return false;
+    //         a = 3;
+    //         if(a != 2)
+    //         {
+                
+    //         }
+    //         else
+    //         {
+
+    //         }
+    //     }
+    //     else
+    //     {
+    //         f = 10;
+    //     }
+    //     if(a == 10000)
+    //     {
+
+    //     }
+    //     a = 10000;
+    //     dgsfagfg = 1000;
+    //     afsaf = 10;
+    //     asdasd = false;
+    // }
+    
 
 
 
     //aaa = 100; //can't refer to variables in other functions
-    combo = o - -9; //gives 13.0
+    combo = o - -9; //should give 19.0
     combo = ((5) + 4 * false % 3); //gives 5.0
 
     // float c;

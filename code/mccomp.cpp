@@ -453,7 +453,12 @@ string addIndent()
       if(i % 2 == 0)
         final.append("|");
       else
-        final.append(" ");
+      {
+        if(i == indentLevel - 1)
+          final.append("-");
+        else
+          final.append(" ");
+      }
   else
     final = std::string(indentLevel,' ');
   return final;
@@ -721,7 +726,8 @@ public:
     string final = "WhileExpr:\n" + addIndent() + "--> " + Cond->to_string();
     for(int i = 0; i < Then.size(); i++)
     {
-      ThenStr.append("\n" + addIndent() + "--> " + Then[i]->to_string()); //SORT THIS IDENT OUT
+      if(Then[i] != nullptr)
+        ThenStr.append("\n" + addIndent() + "--> " + Then[i]->to_string());
     }
     final.append(ThenStr);
     decreaseIndentLevel();
@@ -751,7 +757,7 @@ public:
       final = "ReturnStmt\n" + addIndent() + "--> " + ReturnExpr->to_string();
     else
        final = "ReturnStmt: " + FuncReturnType;
-    
+    decreaseIndentLevel();
     return final;
   };
 };
@@ -1152,19 +1158,27 @@ void printStmtList()
   }
 }
 
+static std::pair<std::string, std::unique_ptr<ASTnode>> curr;
 unique_ptr<ASTnode> processStmtList()
 {
-  auto curr = std::move(stmtList.front());
-  stmtList.pop_front();
-  cout<<"Curr: "<<curr.first<<"size "<<stmtList.size()<<endl;
-  if((curr.first == "new" | curr.first == "else") & (stmtList.size() >= 1)) //ignore "new" and "else"
+  if(stmtList.size() > 0)
   {
-    // cout<<"Discard: "<<curr.first<<endl;
     curr = std::move(stmtList.front());
-    // cout<<"NewCurr: "<<curr.first<<endl;
     stmtList.pop_front();
   }
-  // cout<<"FinalCurr: "<<curr.first<<endl;
+  else
+  {
+    return nullptr;
+  }
+  cout<<"Curr: "<<curr.first<<"size "<<stmtList.size()<<endl;
+  // if((curr.first == "end_while") | (curr.first == "end_if") | (curr.first == "end_else"))//ignore "new"
+  // {
+  //   // cout<<"Discard: "<<curr.first<<endl;
+  //   curr = std::move(stmtList.front());
+  //   // cout<<"NewCurr: "<<curr.first<<endl;
+  //   stmtList.pop_front();
+  // }
+  cout<<"FinalCurr: "<<curr.first<<endl;
   if(curr.first == "vardecl")
   {
     return std::move(curr.second);
@@ -1175,37 +1189,81 @@ unique_ptr<ASTnode> processStmtList()
   }
   else if(curr.first == "while")
   {
+    cout<<"start while"<<endl;
     unique_ptr<ASTnode> cond = processStmtList();
     vector<unique_ptr<ASTnode>> then = {};
-    while(stmtList.front().first != "new")
+    while(curr.first != "end_while")
     {
-      then.push_back(std::move(processStmtList()));
+      unique_ptr<ASTnode> node = std::move(processStmtList());
+      if(node != nullptr)
+        then.push_back(std::move(node));
     }
     cout<<"exit while"<<endl;
-    return make_unique<WhileExprASTnode>(std::move(cond),std::move(then));
+    if(curr.first == "end_while")
+    {
+      // curr = std::move(stmtList.front());
+      // stmtList.pop_front();
+      curr.first = ""; //acknowledge end of while
+      return std::move(make_unique<WhileExprASTnode>(std::move(cond),std::move(then)));
+    }
+    else
+    {
+      cout<<"ERRORRRRRRRRRRRRRRR!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<endl;
+      return nullptr;
+    }
+    
   }
   else if(curr.first == "if")
   {
+    cout<<"start if"<<endl;
     unique_ptr<ASTnode> cond = processStmtList();
     vector<unique_ptr<ASTnode>> Then = {};
     vector<unique_ptr<ASTnode>> Else = {};
-    while((stmtList.front().first != "new") & (stmtList.front().first != "else"))
+    while((curr.first != "end_if"))
     {
-      Then.push_back(std::move(processStmtList()));
+      unique_ptr<ASTnode> node = std::move(processStmtList());
+      if(node != nullptr)
+        Then.push_back(std::move(node));
     }
-    cout<<"exit then"<<endl;
-    if(stmtList.front().first == "else")
-    {
-      while((stmtList.front().first != "new"))
-      {
-        cout<<stmtList.front().first<<endl;
-        Else.push_back(std::move(processStmtList()));
-        //cout<<Else.size()<<endl;
-      }
-      cout<<"exit else"<<endl;
-    }    
+    cout<<"exit if then"<<endl;
 
-    return make_unique<IfExprASTnode>(std::move(cond),std::move(Then),std::move(Else));
+    if(curr.first == "end_if")
+    {
+      curr = std::move(stmtList.front());
+      stmtList.pop_front();
+    }
+
+    if(curr.first == "no_else")
+    {
+      return std::move(make_unique<IfExprASTnode>(std::move(cond),std::move(Then),std::move(Else)));
+    }
+    else if(curr.first == "else")
+    {
+      cout<<"start else"<<endl;
+      while(curr.first != "end_else")
+      {
+        // cout<<"WHAT IS IT::"<<curr.first<<endl;
+      unique_ptr<ASTnode> node = std::move(processStmtList());
+      if(node != nullptr)
+        Else.push_back(std::move(node));
+      }
+      cout<<"exit else then"<<endl;
+    } 
+    cout<<"exit if"<<endl; 
+
+    if(curr.first == "end_else")
+    {
+      curr.first = ""; //acknowledge end of else
+      // curr = std::move(stmtList.front());
+      // stmtList.pop_front();
+      return std::move(make_unique<IfExprASTnode>(std::move(cond),std::move(Then),std::move(Else)));
+    }
+    else
+    {
+      cout<<"ERRORRRRRRRRRRRRRRR!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<endl;
+      return nullptr;
+    }
+
   }
   else if(curr.first == "return")
   {
@@ -1214,8 +1272,8 @@ unique_ptr<ASTnode> processStmtList()
     TOKEN returnTok = nullToken;
     if(returnExpr != nullptr)
       returnTok = returnExpr->getTok();
-    unique_ptr<ReturnExprASTnode> prototypeNode = make_unique<ReturnExprASTnode>(std::move(returnExpr),functiontype, returnTok);
-    return std::move(prototypeNode);
+    unique_ptr<ReturnExprASTnode> returnNode = make_unique<ReturnExprASTnode>(std::move(returnExpr),functiontype, returnTok);
+    return std::move(returnNode);
   }
   else return std::move(nullptr);
 } 
@@ -1224,8 +1282,8 @@ void addToBody()
 {
   while(stmtList.size() != 0)
   {
-        printStmtList();
-
+    cout<<"stmt size: "<<stmtList.size()<<endl;
+    // printStmtList();
     unique_ptr<ASTnode> ptr = std::move(processStmtList());
     if(ptr != nullptr)
       body.push_back(std::move(ptr));
@@ -2321,8 +2379,8 @@ bool p_return_stmt()
     return false;
   }
   
-  pair <string,unique_ptr<ASTnode>> n = make_pair("new",std::move(nullptr));
-  stmtList.push_back(std::move(n));
+  // pair <string,unique_ptr<ASTnode>> n = make_pair("end_return",std::move(nullptr));
+  // stmtList.push_back(std::move(n));
 
   return true;
 }
@@ -2441,6 +2499,9 @@ bool p_else_stmt()
       return false;
     }
 
+    pair <string,unique_ptr<ASTnode>> end_else = make_pair("end_else",std::move(nullptr));
+    stmtList.push_back(std::move(end_else));
+
     return true;
 
   }
@@ -2449,6 +2510,8 @@ bool p_else_stmt()
     if(contains(CurTok.type,FOLLOW_else_stmt))
     {
       cout<<"eat"<<endl;
+      pair <string,unique_ptr<ASTnode>> no_else = make_pair("no_else",std::move(nullptr));
+      stmtList.push_back(std::move(no_else));
       return true;
     }
     else
@@ -2517,6 +2580,9 @@ bool p_if_stmt()
     return false;
   }
 
+  pair <string,unique_ptr<ASTnode>> end_if = make_pair("end_if",std::move(nullptr));
+  stmtList.push_back(std::move(end_if));
+
   if(!p_else_stmt())
   {
     if(!errorReported)
@@ -2524,9 +2590,6 @@ bool p_if_stmt()
     errorReported = true;
     return false;
   }
-  
-  pair <string,unique_ptr<ASTnode>> n = make_pair("new",std::move(nullptr));
-  stmtList.push_back(std::move(n));
 
   return true;
 }
@@ -2585,7 +2648,7 @@ bool p_while_stmt()
     return false;
   }
   
-  pair <string,unique_ptr<ASTnode>> n = make_pair("new",std::move(nullptr));
+  pair <string,unique_ptr<ASTnode>> n = make_pair("end_while",std::move(nullptr));
   stmtList.push_back(std::move(n));
   return true;
 
@@ -3088,7 +3151,10 @@ bool p_decl_prime()
       errorReported = true;
       return false;
     }
-    // printStmtList();
+    cout<<"//////////////////////////////////////"<<endl;
+    printStmtList();
+        cout<<"//////////////////////////////////////"<<endl;
+
     addToBody();
     resetStmtList();
     addFunctionAST(); 
@@ -4048,7 +4114,10 @@ Value* IfExprASTnode::codegen(){
   for(int i = 0; i < Then.size(); i++)
   {
     //new block - create a new symbol table
+    cout<<"size of then:"<<Then.size()<<endl;
     Value* thenVal = Then.at(i)->codegen();
+    // if(thenVal == nullptr)
+    //   cout<<"ERROR!!!!"<<endl;
   }
   //remove symbol table of Then block
   NamedValuesList.pop_back();

@@ -471,14 +471,14 @@ stmt ::= expr_stmt
 expr_stmt ::= expr ";" //create expression
              |  ";"
 
-while_stmt ::= "while" "(" expr ")" stmt //add ("new",nullptr) at the end
+while_stmt ::= "while" "(" expr ")" stmt //add ("end_while",nullptr) at the end
 
-if_stmt ::= "if" "(" expr ")" block else_stmt //add ("new",nullptr) at the end
+if_stmt ::= "if" "(" expr ")" block else_stmt //add ("end_if",nullptr) after block
 
-else_stmt  ::= "else" block           //add ("else",nullptr) after "else"
-              |  epsilon            
+else_stmt  ::= "else" block           //add ("else", nullptr) after "else", add ("end_else", nullptr) after else_stmt
+              |  epsilon            // add ("no_else", nullptr) after else_stmt
 
-return_stmt ::= "return" return_stmt' //add ("new",nullptr) at the end
+return_stmt ::= "return" return_stmt' //add ("end_return",nullptr) at the end
 
 return_stmt' ::= ";" | expr ";" //create ReturnASTnode
 
