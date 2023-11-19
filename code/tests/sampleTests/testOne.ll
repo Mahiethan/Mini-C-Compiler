@@ -17,22 +17,47 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local zeroext i1 @test(i32 noundef %a, float noundef %b, i1 noundef zeroext %c) #0 {
+define dso_local zeroext i1 @test(i32 noundef %a, i32 noundef %b, i1 noundef zeroext %c) #0 {
 entry:
   %a.addr = alloca i32, align 4
-  %b.addr = alloca float, align 4
+  %b.addr = alloca i32, align 4
   %c.addr = alloca i8, align 1
   %test = alloca float, align 4
   %aaa = alloca i8, align 1
   store i32 %a, ptr %a.addr, align 4
-  store float %b, ptr %b.addr, align 4
+  store i32 %b, ptr %b.addr, align 4
   %frombool = zext i1 %c to i8
   store i8 %frombool, ptr %c.addr, align 1
   store float 5.000000e+00, ptr %test, align 4
   store i8 0, ptr %aaa, align 1
-  %0 = load i8, ptr %aaa, align 1
-  %tobool = trunc i8 %0 to i1
-  ret i1 %tobool
+  %0 = load i32, ptr %a.addr, align 4
+  %1 = load i32, ptr %b.addr, align 4
+  %add = add nsw i32 %0, %1
+  %2 = load i8, ptr %c.addr, align 1
+  %tobool = trunc i8 %2 to i1
+  %conv = zext i1 %tobool to i32
+  %add1 = add nsw i32 %add, %conv
+  %conv2 = sitofp i32 %add1 to float
+  store float %conv2, ptr %test, align 4
+  %3 = load i8, ptr %aaa, align 1
+  %tobool3 = trunc i8 %3 to i1
+  ret i1 %tobool3
+}
+
+; Function Attrs: noinline nounwind optnone uwtable
+define dso_local i32 @addition(i32 noundef %n, i32 noundef %m) #0 {
+entry:
+  %n.addr = alloca i32, align 4
+  %m.addr = alloca i32, align 4
+  %result = alloca i32, align 4
+  store i32 %n, ptr %n.addr, align 4
+  store i32 %m, ptr %m.addr, align 4
+  %0 = load i32, ptr %n.addr, align 4
+  %1 = load i32, ptr %m.addr, align 4
+  %add = add nsw i32 %0, %1
+  store i32 %add, ptr %result, align 4
+  %2 = load i32, ptr %result, align 4
+  ret i32 %2
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
@@ -57,30 +82,37 @@ entry:
   %retval = alloca i32, align 4
   %combo = alloca float, align 4
   %ty = alloca i32, align 4
-  %ty2 = alloca float, align 4
   store i32 0, ptr %retval, align 4
   %0 = load i32, ptr @o, align 4
   store i32 %0, ptr %ty, align 4
-  %1 = load i32, ptr %ty, align 4
-  %conv = sitofp i32 %1 to float
-  %cmp = fcmp oeq float %conv, 0x3FF19999A0000000
-  br i1 %cmp, label %if.then, label %if.end
+  %1 = load i32, ptr @o, align 4
+  %cmp = icmp eq i32 %1, 10
+  br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  store float 1.000000e+01, ptr %ty2, align 4
-  store i32 4, ptr @o, align 4
+  store i32 1, ptr %ty, align 4
   br label %if.end
 
-if.end:                                           ; preds = %if.then, %entry
+if.else:                                          ; preds = %entry
+  store i32 7, ptr %ty, align 4
+  br label %if.end
+
+if.end:                                           ; preds = %if.else, %if.then
   %2 = load i32, ptr @o, align 4
   %sub = sub nsw i32 %2, -9
-  %conv3 = sitofp i32 %sub to float
-  store float %conv3, ptr %combo, align 4
+  %conv = sitofp i32 %sub to float
+  store float %conv, ptr %combo, align 4
   store float 5.000000e+00, ptr %combo, align 4
+  %3 = load i32, ptr @o, align 4
+  %4 = load float, ptr %combo, align 4
+  call void @lineTwo(i32 noundef %3, float noundef %4)
   ret i32 0
 }
 
+declare dso_local void @lineTwo(i32 noundef, float noundef) #1
+
 attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #1 = { "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
 
 !llvm.module.flags = !{!0, !1, !2}
 !llvm.ident = !{!3}

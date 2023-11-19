@@ -814,6 +814,9 @@ public:
   string getArgName(int index)
   {
     return Args.at(index)->getVal();
+    // string a = Args.at(index)->getVal();
+    // cout<<"getargs: "<<a<<endl;
+    // return a;
   }
 
   // virtual Value *codegen() override;
@@ -3548,7 +3551,10 @@ Value *VariableReferenceASTnode::codegen() {
       continue;
     }
     else
+    {
+      cout<<"FOUND "<<Name<<endl;
       return V;
+    }
 
   }
   cout<<"End of all symbol tables. Checking global variables of size "<<GlobalVariables.size()<<endl;
@@ -3562,7 +3568,7 @@ Value *VariableReferenceASTnode::codegen() {
   }
   else 
   {
-    cout<<"FOUND"<<endl;
+    cout<<"FOUND GLOBAL "<<Name<<endl;
     return GV;
   }
 }
@@ -4061,7 +4067,31 @@ Value* FuncCallASTnode::codegen(){
   std::vector<Value *> ArgsV;
   for (unsigned i = 0, e = Args.size(); i != e; ++i) 
   {
-    ArgsV.push_back(Args[i]->codegen());
+    Value* args = Args[i]->codegen(); //get alloca
+    //load arguments
+    if(auto *AI = dyn_cast<AllocaInst>(args)) //for ordinary variable alloca
+    {
+      cout<<"alloca arg\n";
+      if(AI->getAllocatedType()->isFloatTy())
+        args = Builder.CreateLoad(Type::getFloatTy(TheContext), AI, "load_arg");
+      else if(AI->getAllocatedType()->isIntegerTy(32))
+        args = Builder.CreateLoad(Type::getInt32Ty(TheContext), AI, "load_arg");
+      else if(AI->getAllocatedType()->isIntegerTy(1))
+        args = Builder.CreateLoad(Type::getInt1Ty(TheContext), AI, "load_arg");
+
+    }  
+    else if(auto *GV = dyn_cast<GlobalVariable>(args)) //for global variables
+    {
+      cout<<"global arg\n";
+      if(GV->getValueType()->isFloatTy())
+        args = Builder.CreateLoad(Type::getFloatTy(TheContext), GV, "load_global_arg");
+      else if(GV->getValueType()->isIntegerTy(32))
+        args = Builder.CreateLoad(Type::getInt32Ty(TheContext), GV, "load_global_arg");
+      else if(GV->getValueType()->isIntegerTy(1))
+        args = Builder.CreateLoad(Type::getInt1Ty(TheContext), GV, "load_global_arg");
+    }
+
+    ArgsV.push_back(args);
     if (!ArgsV.back())
       return nullptr;
   }
@@ -4081,13 +4111,13 @@ Value* IfExprASTnode::codegen(){
     elseExist = true;
   
   Function* TheFunction = Builder.GetInsertBlock()->getParent();
-  BasicBlock* true_ = BasicBlock::Create(TheContext, "then", TheFunction);
+  BasicBlock* true_ = BasicBlock::Create(TheContext, "if_then", TheFunction);
   BasicBlock* false_;
 
   if(elseExist)
-    false_ = BasicBlock::Create(TheContext, "else", TheFunction);
+    false_ = BasicBlock::Create(TheContext, "if_else", TheFunction);
 
-  BasicBlock* end_ = BasicBlock::Create(TheContext, "end");
+  BasicBlock* end_ = BasicBlock::Create(TheContext, "if_end");
   Value* cond = Cond->codegen(); //generate condition expression
   //check type of cond - making sure it is a bool
   if(!(cond->getType()->isIntegerTy(1)))
@@ -4105,7 +4135,7 @@ Value* IfExprASTnode::codegen(){
   if(elseExist)
     Builder.CreateCondBr(comp, true_, false_);
   else
-    Builder.CreateCondBr(comp,true_,end_);
+    Builder.CreateCondBr(comp, true_, end_);
 
   Builder.SetInsertPoint(true_);
   ///Then block
@@ -4122,6 +4152,8 @@ Value* IfExprASTnode::codegen(){
   //remove symbol table of Then block
   NamedValuesList.pop_back();
 
+  Builder.CreateBr(end_);
+
   if(elseExist)
   {
     Builder.SetInsertPoint(false_);
@@ -4134,12 +4166,12 @@ Value* IfExprASTnode::codegen(){
       Value* elseVal = Else.at(i)->codegen();
     }
 
+    Builder.CreateBr(end_);
     //remove symbol table of Else block
     NamedValuesList.pop_back();
   }
 
   TheFunction->insert(TheFunction->end(), end_);
-  Builder.CreateBr(end_);
   Builder.SetInsertPoint(end_);
   return ConstantPointerNull::get(PointerType::getUnqual(Type::getVoidTy(TheContext))); //return null pointer of void type
 }
@@ -4243,7 +4275,7 @@ Function* PrototypeAST::codegen(){
     }
   }
 
-  // cout<<"E: "<<Name<<"|"<<endl;
+  cout<<"E: "<<Name<<"|"<<endl;
 
   string ArgType = "";
   vector<Type *> ArgTypes;
@@ -4293,7 +4325,10 @@ Function* PrototypeAST::codegen(){
  //Set names for all arguments.
  unsigned Idx = 0;
  for (auto &Arg : F->args())
+ {
    Arg.setName(getArgName(Idx));
+   Idx++;
+ }
 
  return F;
   // return nullptr;
@@ -4372,11 +4407,14 @@ if (!TheFunction)
       type = "float";
     else if(Arg.getType()->isIntegerTy(1))
       type = "bool";
+      
     AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, Arg.getName().str(), type); //creating an alloca for each argument
     Builder.CreateStore(&Arg, Alloca);
     NamedValues[std::string(Arg.getName())] = Alloca;
  }
 
+cout<<"ARgs "<<NamedValues.size()<<"stored now"<<endl;
+  
  NamedValuesList.push_back(NamedValues);
 
  string returnType = "";

@@ -9,7 +9,7 @@
 
 
 
-// extern void lineTwo(int a, float b);
+extern void lineTwo(int a, float b);
 // extern void lineTwo(int a, float b;
 
 
@@ -161,15 +161,24 @@ int a;
 float b;
 bool c;
 
-bool test(int a, float b, bool c)
+bool test(int a, int b, bool c)
 {
     float test;
     bool aaa;
     // int aaa; //redefinition
     test = 5.0;
     aaa = false;
+    test = a + b + c;
+    //aaa = a; //a is detected but cannot be casted to bool
     // return 1; //adds appropriate casting for return
     return aaa;
+}
+
+int addition(int n, int m)
+{
+	int result;
+	result = n + m;
+    return result;
 }
 
 void tester(int v)
@@ -326,18 +335,27 @@ int main()
     ty = o;
     // combo = (ty == 1.0);
 
-    if(ty == 1.1) //for testOne.ll, add (float) in front of 1.1
-    {
-        float ty;
-        ty = 10;
-        o = 4; //global variable
-    }
+    // if(ty == (float) 1.1) //for testOne.ll, add (float) in front of 1.1
+    // {
+    //     float ty;
+    //     ty = 10;
+    //     o = 4; //global variable
+    // }
     // else
     // {
     //     bool elseVal;
     //     elseVal = false;
     //     o = 10;
     // }
+
+    if(o == 10)
+    {
+        ty = 1;
+    }
+    else
+    {
+        ty = 7;
+    }
 
     // elseVal = true; //gives scope error
 
@@ -502,6 +520,7 @@ int main()
 
     // return ret(true); //widen parameter size if its not a float
     // return 0.0; //gives error as expected
+    lineTwo(o,combo);
 
     return false; //will be widened to i32 0
 
