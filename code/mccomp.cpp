@@ -3854,7 +3854,7 @@ Value* BinaryExprASTnode::codegen(){
               // lhs = Builder.CreateIntCast(lhs, Type::getInt32Ty(TheContext), false);
               // lhs = Builder.CreateCast(Instruction::FPToSI,lhs,Type::getInt32Ty(TheContext));
               // lhsType = 1;
-              lhs = Builder.CreateFCmpONE(lhs, ConstantFP::get(TheContext, APFloat((float) 0.0)),"bool_cast");
+              lhs = Builder.CreateFCmpONE(lhs, ConstantFP::get(TheContext, APFloat((float) 0.0)),"float_bool_cast");
 
             }
 
@@ -3863,13 +3863,13 @@ Value* BinaryExprASTnode::codegen(){
               // rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
               // rhs = Builder.CreateCast(Instruction::FPToSI,rhs,Type::getInt32Ty(TheContext));
               // rhsType = 1;
-              rhs = Builder.CreateFCmpONE(rhs, ConstantFP::get(TheContext, APFloat((float) 0.0)),"bool_cast");
+              rhs = Builder.CreateFCmpONE(rhs, ConstantFP::get(TheContext, APFloat((float) 0.0)),"float_bool_cast");
             }
             
             if(lhsType == 1)
-              lhs = Builder.CreateICmpNE(lhs, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"bool_cast");
+              lhs = Builder.CreateICmpNE(lhs, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"int_bool_cast");
             if(rhsType == 1)
-              rhs = Builder.CreateICmpNE(rhs, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"bool_cast");
+              rhs = Builder.CreateICmpNE(rhs, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"int_bool_cast");
 
             lhsType = 0;
             rhsType = 0;
@@ -4122,17 +4122,67 @@ Value* IfExprASTnode::codegen(){
   if(cond == nullptr)
       return nullptr;
   //check type of cond - making sure it is a bool
-  if(!(cond->getType()->isIntegerTy(1)))
+  string currType = "";
+  if(auto *AI = dyn_cast<AllocaInst>(cond)) //load RHS
   {
-    string currType = "";
-    if(cond->getType()->isIntegerTy(32))
-      currType = "int";
-    else
+    cout<<"Alloca cond\n";
+    if(AI->getAllocatedType()->isFloatTy())
+    {
+      cond = Builder.CreateLoad(Type::getFloatTy(TheContext), AI, "load_temp");
       currType = "float";
-    errs()<<"Semantic error: Expected type `bool` for the condition statement at line no. "<<Cond->getTok().lineNo<<" column no. "<<Cond->getTok().columnNo<<". Cannot cast from type `"<<currType<<"` to `bool`.\n";
-    return nullptr;
+    }
+    else if(AI->getAllocatedType()->isIntegerTy(32))
+    {
+      cond = Builder.CreateLoad(Type::getInt32Ty(TheContext), AI, "load_temp");
+      currType = "int";
+    }
+    else if(AI->getAllocatedType()->isIntegerTy(1))
+    {
+      cond = Builder.CreateLoad(Type::getInt1Ty(TheContext), AI, "load_temp");
+      currType = "bool";
+    }
   }
-  Value* comp = Builder.CreateICmpNE(cond, ConstantInt::get(TheContext, APInt(1,0, false)), "if_cond");
+  else if(auto *GV = dyn_cast<GlobalVariable>(cond)) //if RHS is a global variable
+  {
+    cout<<"Global cond\n";
+    if(GV->getValueType()->isFloatTy())
+    {
+      cond = Builder.CreateLoad(Type::getFloatTy(TheContext), GV, "load_temp");
+      currType = "float";
+    }
+    else if(GV->getValueType()->isIntegerTy(32))
+    {
+      cond = Builder.CreateLoad(Type::getInt32Ty(TheContext), GV, "load_temp");
+      currType = "int";
+    }
+    else if(GV->getValueType()->isIntegerTy(1))
+    {
+      cond = Builder.CreateLoad(Type::getInt1Ty(TheContext), GV, "load_temp");
+      currType = "bool";
+    }
+  }
+  else
+  {
+    if(cond->getType()->isFloatTy())
+      currType = "float";
+    else if(cond->getType()->isIntegerTy(32))
+      currType = "int";
+    else if(cond->getType()->isIntegerTy(1))
+      currType = "bool";
+  }
+  cout<<"COND TYPE: "<<currType<<endl;
+
+  if(currType != "bool") //cast to bool type
+  {
+    // errs()<<"Semantic error: Expected type `bool` for the condition statement at line no. "<<Cond->getTok().lineNo<<" column no. "<<Cond->getTok().columnNo<<". Cannot cast from type `"<<currType<<"` to `bool`.\n";
+    // return nullptr;
+    if(currType == "float")
+      cond = Builder.CreateFCmpONE(cond, ConstantFP::get(TheContext, APFloat((float) 0.0)),"float_bool_cast");   
+    else if(currType == "int")
+      cond = Builder.CreateICmpNE(cond, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"int_bool_cast");
+  }
+
+  Value* comp = Builder.CreateICmpNE(cond, ConstantInt::get(TheContext, APInt(1,0,false)), "if_cond");
 
   if(elseExist)
     Builder.CreateCondBr(comp, true_, false_);
@@ -4219,16 +4269,66 @@ Value* WhileExprASTnode::codegen(){
   if(cond == nullptr)
       return nullptr;
   //check type of cond - making sure it is a bool
-  if(!(cond->getType()->isIntegerTy(1)))
+  string currType = "";
+  if(auto *AI = dyn_cast<AllocaInst>(cond)) //load RHS
   {
-    string currType = "";
-    if(cond->getType()->isIntegerTy(32))
-      currType = "int";
-    else
+    cout<<"Alloca cond\n";
+    if(AI->getAllocatedType()->isFloatTy())
+    {
+      cond = Builder.CreateLoad(Type::getFloatTy(TheContext), AI, "load_temp");
       currType = "float";
-    errs()<<"Semantic error: Expected type `bool` for the condition statement at line no. "<<Cond->getTok().lineNo<<" column no. "<<Cond->getTok().columnNo<<". Cannot cast from type `"<<currType<<"` to `bool`.\n";
-    return nullptr;
+    }
+    else if(AI->getAllocatedType()->isIntegerTy(32))
+    {
+      cond = Builder.CreateLoad(Type::getInt32Ty(TheContext), AI, "load_temp");
+      currType = "int";
+    }
+    else if(AI->getAllocatedType()->isIntegerTy(1))
+    {
+      cond = Builder.CreateLoad(Type::getInt1Ty(TheContext), AI, "load_temp");
+      currType = "bool";
+    }
   }
+  else if(auto *GV = dyn_cast<GlobalVariable>(cond)) //if RHS is a global variable
+  {
+    cout<<"Global cond\n";
+    if(GV->getValueType()->isFloatTy())
+    {
+      cond = Builder.CreateLoad(Type::getFloatTy(TheContext), GV, "load_temp");
+      currType = "float";
+    }
+    else if(GV->getValueType()->isIntegerTy(32))
+    {
+      cond = Builder.CreateLoad(Type::getInt32Ty(TheContext), GV, "load_temp");
+      currType = "int";
+    }
+    else if(GV->getValueType()->isIntegerTy(1))
+    {
+      cond = Builder.CreateLoad(Type::getInt1Ty(TheContext), GV, "load_temp");
+      currType = "bool";
+    }
+  }
+  else
+  {
+    if(cond->getType()->isFloatTy())
+      currType = "float";
+    else if(cond->getType()->isIntegerTy(32))
+      currType = "int";
+    else if(cond->getType()->isIntegerTy(1))
+      currType = "bool";
+  }
+  cout<<"COND TYPE: "<<currType<<endl;
+
+  if(currType != "bool") //cast to bool type
+  {
+    // errs()<<"Semantic error: Expected type `bool` for the condition statement at line no. "<<Cond->getTok().lineNo<<" column no. "<<Cond->getTok().columnNo<<". Cannot cast from type `"<<currType<<"` to `bool`.\n";
+    // return nullptr;
+    if(currType == "float")
+      cond = Builder.CreateFCmpONE(cond, ConstantFP::get(TheContext, APFloat((float) 0.0)),"float_bool_cast");   
+    else if(currType == "int")
+      cond = Builder.CreateICmpNE(cond, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"int_bool_cast");
+  }
+
 
   Value* comp = Builder.CreateICmpNE(cond, ConstantInt::get(TheContext, APInt(1,0, false)), "if_cond");
   Builder.CreateCondBr(comp, true_, false_);

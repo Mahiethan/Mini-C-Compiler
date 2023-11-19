@@ -221,6 +221,7 @@ int main()
     // int not;
 
     float combo;
+    int o;
     // float comboTwo;
     // float comboThree;
 

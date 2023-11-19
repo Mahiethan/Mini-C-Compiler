@@ -3,10 +3,10 @@ source_filename = "testOne.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-redhat-linux-gnu"
 
-@o = dso_local global i32 0, align 4
 @a = dso_local global i32 0, align 4
 @b = dso_local global float 0.000000e+00, align 4
 @c = dso_local global i8 0, align 1
+@o = dso_local global i32 0, align 4
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local float @asd() #0 {
@@ -81,19 +81,21 @@ define dso_local i32 @main() #0 {
 entry:
   %retval = alloca i32, align 4
   %combo = alloca float, align 4
+  %o = alloca i32, align 4
   %ty = alloca i32, align 4
   %flo = alloca i32, align 4
   %A = alloca i32, align 4
   %hg_o = alloca i32, align 4
   %hg = alloca i32, align 4
   store i32 0, ptr %retval, align 4
-  %0 = load i32, ptr @o, align 4
+  %0 = load i32, ptr %o, align 4
   store i32 %0, ptr %ty, align 4
   %1 = load i32, ptr @a, align 4
   %cmp = icmp eq i32 %1, 10
   br i1 %cmp, label %if.then, label %if.else8
 
 if.then:                                          ; preds = %entry
+  store i32 99, ptr %hg_o, align 4
   br label %while.cond
 
 while.cond:                                       ; preds = %if.end, %if.then
@@ -102,7 +104,7 @@ while.cond:                                       ; preds = %if.end, %if.then
   br i1 %cmp1, label %while.body, label %while.end7
 
 while.body:                                       ; preds = %while.cond
-  store i32 20, ptr @o, align 4
+  store i32 20, ptr %o, align 4
   %3 = load i32, ptr %ty, align 4
   %cmp2 = icmp ne i32 %3, 19
   br i1 %cmp2, label %if.then3, label %if.else
@@ -110,16 +112,14 @@ while.body:                                       ; preds = %while.cond
 if.then3:                                         ; preds = %while.body
   br label %while.cond4
 
-while.cond4:                                      ; preds = %while.body6, %if.then3
+while.cond4:                                      ; preds = %if.then3
   %4 = load i32, ptr @a, align 4
   %cmp5 = icmp eq i32 %4, 10
   br i1 %cmp5, label %while.body6, label %while.end
 
 while.body6:                                      ; preds = %while.cond4
-  %5 = load i32, ptr @a, align 4
-  %sub = sub nsw i32 %5, 1
-  store i32 %sub, ptr %hg, align 4
-  br label %while.cond4, !llvm.loop !4
+  store i32 0, ptr %retval, align 4
+  br label %return
 
 while.end:                                        ; preds = %while.cond4
   store i32 0, ptr %hg, align 4
@@ -131,10 +131,10 @@ if.else:                                          ; preds = %while.body
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %while.end
-  br label %while.cond, !llvm.loop !6
+  br label %while.cond, !llvm.loop !4
 
 while.end7:                                       ; preds = %while.cond
-  store i32 10, ptr @o, align 4
+  store i32 10, ptr %o, align 4
   br label %if.end9
 
 if.else8:                                         ; preds = %entry
@@ -142,12 +142,17 @@ if.else8:                                         ; preds = %entry
   br label %if.end9
 
 if.end9:                                          ; preds = %if.else8, %while.end7
-  %6 = load i32, ptr @o, align 4
-  %sub10 = sub nsw i32 %6, -9
-  %conv = sitofp i32 %sub10 to float
+  %5 = load i32, ptr %o, align 4
+  %sub = sub nsw i32 %5, -9
+  %conv = sitofp i32 %sub to float
   store float %conv, ptr %combo, align 4
   store float 5.000000e+00, ptr %combo, align 4
-  ret i32 0
+  store i32 0, ptr %retval, align 4
+  br label %return
+
+return:                                           ; preds = %if.end9, %while.body6
+  %6 = load i32, ptr %retval, align 4
+  ret i32 %6
 }
 
 attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
@@ -161,4 +166,3 @@ attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-l
 !3 = !{!"clang version 15.0.7 (Red Hat 15.0.7-1.module+el8.8.0+1144+0a4e73bd)"}
 !4 = distinct !{!4, !5}
 !5 = !{!"llvm.loop.mustprogress"}
-!6 = distinct !{!6, !5}

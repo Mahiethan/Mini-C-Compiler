@@ -73,11 +73,12 @@ entry:
   %A = alloca i32, align 4
   %flo = alloca i32, align 4
   %ty = alloca i32, align 4
+  %o = alloca i32, align 4
   %combo = alloca float, align 4
-  %load_global_temp = load i32, ptr @o, align 4
-  store i32 %load_global_temp, ptr %ty, align 4
-  %load_global_temp1 = load i32, ptr @a, align 4
-  %eq_tmp = icmp eq i32 %load_global_temp1, 10
+  %load_temp = load i32, ptr %o, align 4
+  store i32 %load_temp, ptr %ty, align 4
+  %load_global_temp = load i32, ptr @a, align 4
+  %eq_tmp = icmp eq i32 %load_global_temp, 10
   %if_cond = icmp ne i1 %eq_tmp, false
   br i1 %if_cond, label %if_then, label %if_else
 
@@ -90,13 +91,13 @@ if_else:                                          ; preds = %entry
   br label %if_end14
 
 while_cond:                                       ; preds = %if_end, %if_then
-  %load_temp = load i32, ptr %ty, align 4
-  %eq_tmp2 = icmp eq i32 %load_temp, 10
+  %load_temp1 = load i32, ptr %ty, align 4
+  %eq_tmp2 = icmp eq i32 %load_temp1, 10
   %if_cond3 = icmp ne i1 %eq_tmp2, false
   br i1 %if_cond3, label %while_body, label %while_end13
 
 while_body:                                       ; preds = %while_cond
-  store i32 20, ptr @o, align 4
+  store i32 20, ptr %o, align 4
   %load_temp6 = load i32, ptr %ty, align 4
   %ne_tmp = icmp ne i32 %load_temp6, 19
   %if_cond7 = icmp ne i1 %ne_tmp, false
@@ -127,12 +128,12 @@ if_end:                                           ; preds = %if_else5, %while_en
   br label %while_cond
 
 while_end13:                                      ; preds = %while_cond
-  store i32 10, ptr @o, align 4
+  store i32 10, ptr %o, align 4
   br label %if_end14
 
 if_end14:                                         ; preds = %if_else, %while_end13
-  %load_global_temp15 = load i32, ptr @o, align 4
-  %sub_tmp = sub i32 %load_global_temp15, -9
+  %load_temp15 = load i32, ptr %o, align 4
+  %sub_tmp = sub i32 %load_temp15, -9
   %itof_cast = sitofp i32 %sub_tmp to float
   store float %itof_cast, ptr %combo, align 4
   store float 5.000000e+00, ptr %combo, align 4
