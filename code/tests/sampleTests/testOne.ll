@@ -142,6 +142,7 @@ if.else8:                                         ; preds = %entry
   br label %if.end9
 
 if.end9:                                          ; preds = %if.else8, %while.end7
+  call void @tester(i32 noundef 0)
   %5 = load i32, ptr %o, align 4
   %sub = sub nsw i32 %5, -9
   %conv = sitofp i32 %sub to float

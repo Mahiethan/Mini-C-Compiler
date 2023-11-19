@@ -441,6 +441,9 @@ int main()
     }
     //if_end14
 
+    // tester(23.2); //should give semantic error (cannot narrow)
+    tester(false); //valid - param widened
+
     //WORKS
     // if(flo == 1) 
     // {

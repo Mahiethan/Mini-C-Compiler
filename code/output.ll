@@ -132,6 +132,7 @@ while_end13:                                      ; preds = %while_cond
   br label %if_end14
 
 if_end14:                                         ; preds = %if_else, %while_end13
+  call void @tester(i32 0)
   %load_temp15 = load i32, ptr %o, align 4
   %sub_tmp = sub i32 %load_temp15, -9
   %itof_cast = sitofp i32 %sub_tmp to float

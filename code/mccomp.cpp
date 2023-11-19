@@ -4068,28 +4068,107 @@ Value* FuncCallASTnode::codegen(){
   for (unsigned i = 0, e = Args.size(); i != e; ++i) 
   {
     Value* args = Args[i]->codegen(); //get alloca
+    string currType = "";
     //load arguments
     if(auto *AI = dyn_cast<AllocaInst>(args)) //for ordinary variable alloca
     {
       cout<<"alloca arg\n";
       if(AI->getAllocatedType()->isFloatTy())
+      {
         args = Builder.CreateLoad(Type::getFloatTy(TheContext), AI, "load_arg");
+        currType = "float";
+      }
       else if(AI->getAllocatedType()->isIntegerTy(32))
+      {
         args = Builder.CreateLoad(Type::getInt32Ty(TheContext), AI, "load_arg");
+        currType = "int";
+      }
       else if(AI->getAllocatedType()->isIntegerTy(1))
+      {
         args = Builder.CreateLoad(Type::getInt1Ty(TheContext), AI, "load_arg");
+        currType = "bool";
+      }
 
     }  
     else if(auto *GV = dyn_cast<GlobalVariable>(args)) //for global variables
     {
       cout<<"global arg\n";
       if(GV->getValueType()->isFloatTy())
+      {
         args = Builder.CreateLoad(Type::getFloatTy(TheContext), GV, "load_global_arg");
+        currType = "float";
+      }
       else if(GV->getValueType()->isIntegerTy(32))
+      {
         args = Builder.CreateLoad(Type::getInt32Ty(TheContext), GV, "load_global_arg");
+        currType = "int";
+      }
       else if(GV->getValueType()->isIntegerTy(1))
+      {
         args = Builder.CreateLoad(Type::getInt1Ty(TheContext), GV, "load_global_arg");
+        currType = "bool";
+      }
     }
+    else
+    {
+      if(args->getType()->isIntegerTy(32))
+      {
+        currType = "int";
+      }
+      else if(args->getType()->isIntegerTy(1))
+      {
+        currType = "bool";
+      }
+      else if(args->getType()->isFloatTy())
+      {
+        currType = "float";
+      }
+    }
+
+    Type* actualType = CalleeF->getArg(0)->getType();
+    string actualTypeStr = "";
+
+    if(actualType->isIntegerTy(32))
+      actualTypeStr = "int";
+    else if(actualType->isIntegerTy(1))
+      actualTypeStr = "bool";
+    else if(actualType->isFloatTy())
+      actualTypeStr = "float";
+
+    cout<<"Param type "<<currType<<" should be "<<actualTypeStr<<endl;
+
+    if(currType != actualTypeStr)
+    {
+      if(actualTypeStr == "bool")
+      {
+        errs()<<"Semantic error: Cannot cast from `"<<currType<<"` to `"<<actualTypeStr<<"`.\n";
+        return nullptr;
+      }
+      else if(actualTypeStr == "int")
+      {
+        if(currType == "float")
+        {
+          errs()<<"Semantic error: Cannot cast from `"<<currType<<"` to `"<<actualTypeStr<<"`.\n";
+          return nullptr;
+        }
+        else //bool to int
+        {
+          args = Builder.CreateIntCast(args, Type::getInt32Ty(TheContext), false, "btoi_cast");
+        }
+      }
+      else if(actualTypeStr == "float")
+      {
+        if(currType == "bool")
+        {
+          args = Builder.CreateIntCast(args, Type::getInt32Ty(TheContext), false);
+          args = Builder.CreateCast(Instruction::SIToFP,args,Type::getFloatTy(TheContext),"btof_cast");
+        }
+        else //int to float
+        {
+          args = Builder.CreateCast(Instruction::SIToFP,args,Type::getFloatTy(TheContext),"itof_cast");
+        }
+      }
+      }
 
     ArgsV.push_back(args);
     if (!ArgsV.back())
