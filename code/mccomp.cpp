@@ -4119,6 +4119,8 @@ Value* IfExprASTnode::codegen(){
 
   BasicBlock* end_ = BasicBlock::Create(TheContext, "if_end");
   Value* cond = Cond->codegen(); //generate condition expression
+  if(cond == nullptr)
+      return nullptr;
   //check type of cond - making sure it is a bool
   if(!(cond->getType()->isIntegerTy(1)))
   {
@@ -4141,18 +4143,32 @@ Value* IfExprASTnode::codegen(){
   ///Then block
   std::map<std::string, AllocaInst*> NamedValues_Then; //Creating symbol table for Then block
   NamedValuesList.push_back(NamedValues_Then);
+
+  bool generateBranchForThen = true;
+  bool generateBranchForElse = true;
+  Value* ret;
+
   for(int i = 0; i < Then.size(); i++)
   {
     //new block - create a new symbol table
     cout<<"size of then:"<<Then.size()<<endl;
     Value* thenVal = Then.at(i)->codegen();
+    if(thenVal == nullptr)
+      return nullptr;
+    if(auto *R = dyn_cast<ReturnInst>(thenVal))
+      {
+        ret = thenVal;
+        generateBranchForThen = false;
+        break; //don't generate IR for instructions after return
+      }
     // if(thenVal == nullptr)
     //   cout<<"ERROR!!!!"<<endl;
   }
   //remove symbol table of Then block
   NamedValuesList.pop_back();
 
-  Builder.CreateBr(end_);
+  if(generateBranchForThen)
+    Builder.CreateBr(end_);
 
   if(elseExist)
   {
@@ -4164,16 +4180,30 @@ Value* IfExprASTnode::codegen(){
     for(int i = 0; i < Else.size(); i++)
     {
       Value* elseVal = Else.at(i)->codegen();
+      if(elseVal == nullptr)
+        return nullptr;
+      if(auto *R = dyn_cast<ReturnInst>(elseVal))
+      {
+        ret = elseVal;
+        generateBranchForElse = false;
+        break; //don't generate IR for instructions after return
+      }
     }
 
-    Builder.CreateBr(end_);
+    if(generateBranchForElse)
+      Builder.CreateBr(end_);
     //remove symbol table of Else block
     NamedValuesList.pop_back();
   }
 
-  TheFunction->insert(TheFunction->end(), end_);
-  Builder.SetInsertPoint(end_);
-  return ConstantPointerNull::get(PointerType::getUnqual(Type::getVoidTy(TheContext))); //return null pointer of void type
+  if(generateBranchForThen | generateBranchForElse) //only generate if_end if if_then and if_else don't have a return stmt
+  {
+    TheFunction->insert(TheFunction->end(), end_);
+    Builder.SetInsertPoint(end_);
+    return ConstantPointerNull::get(PointerType::getUnqual(Type::getVoidTy(TheContext))); //return null pointer of void type
+  }
+  else
+    return ret;
 }
 
 Value* WhileExprASTnode::codegen(){
@@ -4389,8 +4419,6 @@ if (!TheFunction)
  // Record the function arguments in the NamedValues map.
 //  NamedValues.clear();
  std::map<std::string, AllocaInst*> NamedValues;
-
-
 
  for (auto &Arg : TheFunction->args()) //loading each argument in the symbol table
  {

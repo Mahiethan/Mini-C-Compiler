@@ -82,37 +82,69 @@ entry:
   %retval = alloca i32, align 4
   %combo = alloca float, align 4
   %ty = alloca i32, align 4
+  %flo = alloca i32, align 4
+  %A = alloca i32, align 4
+  %a = alloca i32, align 4
   store i32 0, ptr %retval, align 4
   %0 = load i32, ptr @o, align 4
   store i32 %0, ptr %ty, align 4
-  %1 = load i32, ptr @o, align 4
-  %cmp = icmp eq i32 %1, 10
+  %1 = load i32, ptr @a, align 4
+  %cmp = icmp eq i32 %1, 1
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  store i32 1, ptr %ty, align 4
-  br label %if.end
+  br label %if.end10
 
 if.else:                                          ; preds = %entry
-  store i32 7, ptr %ty, align 4
+  store i32 1, ptr %a, align 4
+  %2 = load i32, ptr %a, align 4
+  %cmp1 = icmp eq i32 %2, 1
+  br i1 %cmp1, label %if.then2, label %if.else5
+
+if.then2:                                         ; preds = %if.else
+  store i32 0, ptr %a, align 4
+  %3 = load i32, ptr %a, align 4
+  %cmp3 = icmp eq i32 %3, 3
+  br i1 %cmp3, label %if.then4, label %if.end
+
+if.then4:                                         ; preds = %if.then2
   br label %if.end
 
-if.end:                                           ; preds = %if.else, %if.then
-  %2 = load i32, ptr @o, align 4
-  %sub = sub nsw i32 %2, -9
+if.end:                                           ; preds = %if.then4, %if.then2
+  store i32 0, ptr %retval, align 4
+  br label %return
+
+if.else5:                                         ; preds = %if.else
+  store i32 10, ptr @o, align 4
+  br label %if.end6
+
+if.end6:                                          ; preds = %if.else5
+  %4 = load i32, ptr %a, align 4
+  %cmp7 = icmp eq i32 %4, 10000
+  br i1 %cmp7, label %if.then8, label %if.end9
+
+if.then8:                                         ; preds = %if.end6
+  br label %if.end9
+
+if.end9:                                          ; preds = %if.then8, %if.end6
+  store i32 999, ptr %a, align 4
+  br label %if.end10
+
+if.end10:                                         ; preds = %if.end9, %if.then
+  %5 = load i32, ptr @o, align 4
+  %sub = sub nsw i32 %5, -9
   %conv = sitofp i32 %sub to float
   store float %conv, ptr %combo, align 4
   store float 5.000000e+00, ptr %combo, align 4
-  %3 = load i32, ptr @o, align 4
-  %4 = load float, ptr %combo, align 4
-  call void @lineTwo(i32 noundef %3, float noundef %4)
-  ret i32 0
+  store i32 0, ptr %retval, align 4
+  br label %return
+
+return:                                           ; preds = %if.end10, %if.end
+  %6 = load i32, ptr %retval, align 4
+  ret i32 %6
 }
 
-declare dso_local void @lineTwo(i32 noundef, float noundef) #1
-
 attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #1 = { "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
 
 !llvm.module.flags = !{!0, !1, !2}
 !llvm.ident = !{!3}

@@ -1,5 +1,5 @@
 // works
-// #include <stdbool.h>
+#include <stdbool.h>
 //cant have func decl before extern
 // int lineOne(int a, float b)
 // {
@@ -9,7 +9,7 @@
 
 
 
-extern void lineTwo(int a, float b);
+// extern void lineTwo(int a, float b);
 // extern void lineTwo(int a, float b;
 
 
@@ -331,7 +331,7 @@ int main()
     // comboTwo = 0 && ((5 + 4 * 89 / 124 % 66 * (54.0 != 340)) + (6546.0 / 54.0) * -34 * 100/true + (0.0 && 50/50)); //0.0
     // comboThree = true || ((5 + 4 * 89 / 124 % 66 * (54.0 != 340)) + (6546.0 / 54.0) * -34 * 100/true + (0.0 && 50/50)); //1.0
 
-    int ty;
+    int ty; int flo; int A;
     ty = o;
     // combo = (ty == 1.0);
 
@@ -348,14 +348,25 @@ int main()
     //     o = 10;
     // }
 
-    if(o == 10)
-    {
-        ty = 1;
-    }
-    else
-    {
-        ty = 7;
-    }
+    // if(o == 10)
+    // {
+    //     ty = 1;
+    //     // return ty; //doesn't generate if_end branch
+    //     if(ty == 1)
+    //     {
+    //         o = 10;
+    //         // return 1;
+    //     }
+    //     else
+    //     {
+    //         return 0;
+    //     }
+    // }
+    // else
+    // {
+    //     return ty;
+    //     ty = 100; //ignored
+    // }
 
     // elseVal = true; //gives scope error
 
@@ -414,7 +425,7 @@ int main()
 
 
     //WORKS
-    // if(flo == 1)
+    // if(flo == 1) 
     // {
     //     if(a == 10)
     //     {
@@ -458,46 +469,44 @@ int main()
     // }
 
     //WORKS
-    // if(a == 1)
-    // {
+    if(a == 1) //if_then
+    {
 
-    // }
-    // else
-    // {
-    //     int a;
-    //     a = 1;
-    //     if(a == 1)
-    //     {
-    //         a = !4;
-    //         if(a == 3)
-    //         {
+    }
+    else //if_else
+    {
+        int a;
+        a = 1;
+        if(a == 1) //if_then2
+        {
+            a = !4; //same as a == 1
+            if(a == 3) //if_then6
+            {
 
-    //         }
-    //         return false;
-    //         a = 3;
-    //         if(a != 2)
-    //         {
-                
-    //         }
-    //         else
-    //         {
+            }
+            return false; //if_end_0
+            a = 3; //ignored
+            if(a != 2) //ignored
+            {
+                ty = 9999;
+            }
+            else //ignored
+            {
 
-    //         }
-    //     }
-    //     else
-    //     {
-    //         f = 10;
-    //     }
-    //     if(a == 10000)
-    //     {
+            }
+        }
+        else //if_else3
+        {
+            o = 10;
+        }
 
-    //     }
-    //     a = 10000;
-    //     dgsfagfg = 1000;
-    //     afsaf = 10;
-    //     asdasd = false;
-    // }
-    
+        if(a == 10000)//if_end10
+        {
+            //if_then11
+        }
+        a = 999; //if_end_15
+    }
+    //if_end16
 
 
 
@@ -520,7 +529,7 @@ int main()
 
     // return ret(true); //widen parameter size if its not a float
     // return 0.0; //gives error as expected
-    lineTwo(o,combo);
+    // lineTwo(o,combo);
 
     return false; //will be widened to i32 0
 
