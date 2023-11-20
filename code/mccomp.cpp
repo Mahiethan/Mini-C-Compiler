@@ -356,7 +356,7 @@ static TOKEN gettok() {
     return returnTok("0", EOF_TOK);
   }
 
-  //Changing this to check for invalid tokens, instead of passing it as ascii values:
+  //This part of the original lexer code is changed, to not print out invalid tokens as its ascii values. This enables the lexer to detect invalid tokens.
 
   // // Otherwise, just return the character as its ascii value.
   // int ThisChar = LastChar;
@@ -368,28 +368,24 @@ static TOKEN gettok() {
   //for ascii values - +, -, *, %
   if(LastChar == '-')
   {
-    //cout<<"Minus "<<char(LastChar)<<endl;
     LastChar = getc(pFile);
     columnNo++;
     return returnTok("-", MINUS);
   }
   else if(LastChar == '+')
   {
-    //cout<<"Plus "<<char(LastChar)<<endl;
     LastChar = getc(pFile);
     columnNo++;
     return returnTok("+", PLUS);
   }
   else if(LastChar == '*')
   {
-    //cout<<"Asterix "<<char(LastChar)<<endl;
     LastChar = getc(pFile);
     columnNo++;
     return returnTok("*", ASTERIX);
   }
   else if(LastChar == '%')
   {
-    //cout<<"Mod "<<char(LastChar)<<endl;
     LastChar = getc(pFile);
     columnNo++;
     return returnTok("%", MOD);
@@ -397,7 +393,6 @@ static TOKEN gettok() {
 
   //otherwise, pass current symbol as an invalid token
   int ThisChar = LastChar;
-  //cout<<"Invalid token "<<char(ThisChar)<<endl;
   std::string s(1, ThisChar);
   LastChar = getc(pFile);
   columnNo++;
@@ -425,9 +420,9 @@ static TOKEN getNextToken() {
   return CurTok = temp;
 }
 
-static void putBackToken(TOKEN tok) { tok_buffer.push_front(tok); }
+static void putBackToken(TOKEN tok) { tok_buffer.push_front(tok); } //return token to buffer after looking-ahead two tokens
 
-static void clearTokBuffer() { 
+static void clearTokBuffer() {  //clear the buffer at the end
   while(tok_buffer.size() != 0) 
   {
     tok_buffer.pop_front();
@@ -437,6 +432,8 @@ static void clearTokBuffer() {
 //===----------------------------------------------------------------------===//
 // AST nodes
 //===----------------------------------------------------------------------===//
+
+//Code to make indents for AST printing
 static int indentLevel = 0;
 static int indentAmount = 3;
 static bool cont = true;
@@ -563,13 +560,11 @@ class VariableASTnode : public ASTnode{
   virtual TOKEN getTok() const override{
     return Tok;
   }
-  // virtual AllocaInst *codegen() override;
   virtual std::string to_string() const override {
-  //return a sting representation of this AST node
+  //return a string representation of this AST node
     string final =  "VarDecl: " + Type + " " + Val; 
     decreaseIndentLevel();
     return final;
-    // return "a";
   };
 };
 
@@ -586,7 +581,7 @@ class VariableReferenceASTnode : public ASTnode{
   }
   std::string getName() const override{ return Name; }
   virtual std::string to_string() const override {
-  //return a sting representation of this AST node
+  //return a string representation of this AST node
     string final = "VarRef: " + Name;
     decreaseIndentLevel();
     return final;
@@ -649,23 +644,15 @@ public:
     string args = "";
     for(int i = 0; i < Args.size(); i++)
     {
-      // if(i == Args.size() - 1)
       args.append("\n" + addIndent() + "--> Param" + Args[i]->to_string());
-      // args.append(" -> Param" + Args[i]->to_string());
-    // else
-    //   args.append(addIndent() + " -> Param" + Args[i]->to_string() + "\n");
     }
-
-    // if(args.length() != 0)
-    //   args = "\n" + args;
-
     string final = "FunctionCall: " + Callee + args;
     decreaseIndentLevel();
     return final;
   };
 };
 
-/// IfExprASTnode - Expression class for if/then/else.
+/// IfExprASTnode - Expression class for if statement
 class IfExprASTnode : public ASTnode {
   std::unique_ptr<ASTnode> Cond;
   std::vector<std::unique_ptr<ASTnode>> Then, Else;
@@ -687,13 +674,11 @@ public:
     if(Then[i] != nullptr)
       ThenStr.append("\n" + addIndent() + "--> " + Then[i]->to_string()); //SORT THIS IDENT OUT
   } 
-  // cout<<"Size of Else:"<<Else.size()<<endl;
-  // cout<<"Size of Then:"<<Then.size()<<endl;
+
   final.append(ThenStr);
   if(Else.size() != 0)
    {
       ElseStr = "\n" + addIndent() + "--> ElseExpr:";
-      // decreaseIndentLevel();
    }
   for(int j = 0; j < Else.size(); j++)
   {
@@ -701,17 +686,14 @@ public:
       ElseStr.append("\n" + addIndent() + "--> " + Else[j]->to_string()); 
   } 
   final.append(ElseStr);
-  decreaseIndentLevel(); //one for if
+  decreaseIndentLevel(); 
   if(Else.size() != 0)
   {
-    decreaseIndentLevel(); //one for else
+    decreaseIndentLevel(); 
   }
   return final;
   };
 };
-
-//Link to ADTs 
-//https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl07.html
 
 /// WhileExprASTnode - Expression class for while/do
 class WhileExprASTnode : public ASTnode {
@@ -765,12 +747,12 @@ public:
   };
 };
 
+///Base class for all top level nodes, such as function declarations, prototypes and global variables
 class TopLevelASTnode {
 public:
   virtual ~TopLevelASTnode() {}
   virtual Value *codegen() = 0;
   virtual std::string to_string() const {return "";};
-  // virtual TOKEN getTok() const {return {};};
 };
 
 //GlobalVariableAST - This class represents global variable declarations
@@ -790,22 +772,16 @@ class GlobalVariableAST : public TopLevelASTnode {
     return Ty;
   }
   virtual Value *codegen() override;
-  // virtual AllocaInst *codegen() override;
   virtual std::string to_string() const override {
-  //return a sting representation of this AST node
+  //return a string representation of this AST node
     string final =  "GlobalVarDecl: " + Ty + " " + Val; 
     decreaseIndentLevel();
     return final;
-    // return "a";
   };
 };
 
-
-/// PrototypeAST - This class represents the "prototype" for a function,
-/// which captures its name, and its argument names (thus implicitly the number
-/// of arguments the function takes).
+/// PrototypeAST - This class represents the "prototype" for a function, capturing its name, and its argument names
 class PrototypeAST : public TopLevelASTnode {
-  // string returnType;
   std::string Name;
   std::vector<unique_ptr<VariableASTnode>> Args;
 
@@ -818,37 +794,19 @@ public:
   string getArgName(int index)
   {
     return Args.at(index)->getVal();
-    // string a = Args.at(index)->getVal();
-    // cout<<"getargs: "<<a<<endl;
-    // return a;
   }
 
-  // virtual Value *codegen() override;
   virtual Function *codegen() override;
 
   virtual std::string to_string() const override {
-  //return a sting representation of this AST node
+  //return a string representation of this AST node
   string name = getName();
   string args = "";
-  //cout<<Args.size()<<endl;
-  // if(Args.size() > 0)
-  // {
-  //   args.append("\n" + addIndent() + "--> Param" + Args[i]->to_string());
-  // }
+
   for(int i = 0; i < Args.size(); i++)
   {
-    //cout<<Args[i]->to_string()<<endl;
-    // if(i == Args.size() - 1)
-    //   args.append("\n" + addIndent() + "`-> Param" + Args[i]->to_string());
-    // else
       args.append("\n" + addIndent() + "--> Param" + Args[i]->to_string());
-  }
-
-//  if(Args.size() > 0)
-//   {
-//     decreaseIndentLevel();
-//   }
- 
+  } 
   return "FunctionDecl: " + name + args;
   };
 };
@@ -863,20 +821,16 @@ public:
               std::vector<std::unique_ptr<ASTnode>> Body) //Body can contain multiple expressions
       : Proto(std::move(Proto)), Body(std::move(Body)) {}
 
-    
-
-    // virtual Value *codegen() override;
-    virtual Function *codegen() override;
+        virtual Function *codegen() override;
 
     virtual std::string to_string() const override{
-  //return a sting representation of this AST node
+  //return a string representation of this AST node
       string proto = Proto->to_string();
       string final =  proto;
       string body = "";
       if(Body.size() != 0)
       {
         body = "\n" + addIndent() + "--> Function Body:";
-        // decreaseIndentLevel();
       }
       for(int i = 0; i < Body.size(); i++)
       {
@@ -889,47 +843,38 @@ public:
   };
 };
 
-static vector<unique_ptr<TopLevelASTnode>> root; //root of the AST (TranslationUnitDecl)
+//===----------------------------------------------------------------------===//
+// Helpful data stores and variables to use during parsing and AST node generation
+//===----------------------------------------------------------------------===//
 
-///temporary vector/string stores
+///root of the AST - consists of a vector of TopLevelASTnodes
+static vector<unique_ptr<TopLevelASTnode>> root; 
 
-//null TOKEN
+//null value for TOKEN variables
 TOKEN nullToken = {};
 
-//these are used to enclose unary expressions so proper precedence can be applied to them
-TOKEN insertLPAR = {LPAR,"(",0,0};
-TOKEN insertRPAR = {RPAR,")",0,0};
+static string prototypeName = ""; //stores prototype name during parsing
+static unique_ptr<VariableASTnode> argument = std::make_unique<VariableASTnode>(CurTok,"",""); //stores a function argument/parameter
+static unique_ptr<GlobalVariableAST> globalVar = std::make_unique<GlobalVariableAST>(CurTok,"",""); //stores a global variable
+static string vartype = ""; //string that specifies type of variable, this is added to the VariableASTnode
+static string functiontype = ""; //string that specifies type of function, this is added to the FunctionASTnode
+static vector<unique_ptr<VariableASTnode>> argumentList = {}; //stores list of arguments of a function
+static vector<unique_ptr<ASTnode>> body = {}; //stores contents of a function body as a vector of ASTnodes
+static TOKEN functionIdent = nullToken; //stores identifier of a function
+static TOKEN variableIdent = nullToken; //storesd identifier of a variable
 
-static string prototypeName = "";
-static unique_ptr<VariableASTnode> argument = std::make_unique<VariableASTnode>(CurTok,"","");
-static unique_ptr<GlobalVariableAST> globalVar = std::make_unique<GlobalVariableAST>(CurTok,"","");
-static string vartype = "";
-static string functiontype = "";
-static vector<unique_ptr<VariableASTnode>> argumentList = {};
-static vector<unique_ptr<ASTnode>> body = {};
-static deque<pair<string,unique_ptr<ASTnode>>> stmtList;
-static TOKEN functionIdent = nullToken;
-static TOKEN variableIdent = nullToken;
-//static vector<string> varNames = {}; //can have more than one variable names IDENT = IDENT = ...
-//static unique_ptr<BinaryExprASTnode> assignment = std::make_unique<BinaryExprASTnode>('=', nullptr, nullptr);
+static deque<pair<string,unique_ptr<ASTnode>>> stmtList; //temporary queue of named AST nodes used to process control flow statements in processStmt()
 
-static vector<TOKEN> expression = {};
-string unary;
+static vector<TOKEN> expression = {}; //these vector of token are used to parse the expression and create the correct ASTnodes
+
+static bool errorReported = false; //used to make sure duplicate syntax error message are not being printed 
+
+///Following functions are used to correctly flush these data stores after use for one AST node.
 
 void resetPrototypeName()
 {
   prototypeName = "";
 }
-
-// void resetAssignment()
-// {
-//   assignment = std::make_unique<BinaryExprASTnode>('=', nullptr, nullptr);
-// }
-
-// void resetVarName()
-// {
-//   varNames = {};
-// }
 
 void resetArgument()
 {
@@ -950,7 +895,6 @@ void resetFunctiontype()
 {
   functiontype = "";
 }
-
 
 void resetArgumentList()
 {
@@ -982,19 +926,374 @@ void resetExpression()
   expression.clear();
 }
 
-void resetUnaryExpr()
+//===----------------------------------------------------------------------===//
+// Helper functions to use during parsing and AST node generation
+//===----------------------------------------------------------------------===//
+
+//used to check if CurTok is present inside a FIRST or FOLLOW set
+static bool contains(int type, vector<TOKEN_TYPE> list)
 {
-  unary = "";
+  for(int i = 0; i < list.size(); i++)
+  {
+    if(list[i] == type)
+      return true;
+  }
+  return false;
 }
 
+//Function that is used to check if CurTok matches the input type, then consumes the token.
+bool match(TOKEN_TYPE token)
+{
+  if(CurTok.type == token)
+  {
+    getNextToken(); //consume token
+    return true;
+  }
+  else
+    return false;
+}
 
-static bool errorReported = false;
+//Creates a FunctionASTnode using all the necessary values gathered during parsing
+void addFunctionAST()
+{
+  prototypeName.append(functiontype + " " + functionIdent.lexeme); //create prototype name
+  resetFunctionIdent();
+  resetFunctiontype();
+  unique_ptr<PrototypeAST> Proto = std::make_unique<PrototypeAST>(prototypeName,std::move(argumentList)); //create PrototypeAST node
+  resetArgumentList();
+  resetPrototypeName();
+  resetFunctiontype();
+  unique_ptr<FunctionAST> Func = std::make_unique<FunctionAST>(std::move(Proto),std::move(body)); //create FunctionAST node, containing PrototypeAST node, created earlier, and vector of AST nodes, body.
+  resetBody();
+  root.push_back(std::move(Func)); //add FunctionAST to root
+}
+
+static std::pair<std::string, std::unique_ptr<ASTnode>> curr; //used in function below to store current statement token to process
+
+//Function used to process all control flow statements and contained expressions, and create their correct AST nodes
+unique_ptr<ASTnode> processStmtList()
+{
+  if(stmtList.size() > 0) //only pop if size is greater than one to avoid seg faults.
+  {
+    curr = std::move(stmtList.front());
+    stmtList.pop_front();
+  }
+  else
+  {
+    return nullptr;
+  }
+
+  if(curr.first == "vardecl") //if a variable declaration is detected, return its AST node
+  {
+    return std::move(curr.second);
+  }
+  else if(curr.first == "expr") //return expression AST node
+  {
+    return std::move(curr.second);
+  }
+  else if(curr.first == "while") //process while statement and block
+  {
+    unique_ptr<ASTnode> cond = processStmtList(); //process the condition statement and store it here
+    vector<unique_ptr<ASTnode>> then = {};
+    while(curr.first != "end_while") //if 'end_while' flag is not detected, keep on adding following ASTnodes in queue to the Then block of while
+    {
+      unique_ptr<ASTnode> node = std::move(processStmtList());
+      if(node != nullptr)
+        then.push_back(std::move(node));
+    }
+    if(curr.first == "end_while") //don't add this flag to any blocks - signifies end of a block
+    {
+      curr.first = ""; //acknowledge end of while
+      return std::move(make_unique<WhileExprASTnode>(std::move(cond),std::move(then))); //return created while block
+    }
+    else
+    {
+      return nullptr;
+    }
+    
+  }
+  else if(curr.first == "if") //process if statement and block
+  {
+    unique_ptr<ASTnode> cond = processStmtList(); //process the condition statement and store it here
+    vector<unique_ptr<ASTnode>> Then = {};
+    vector<unique_ptr<ASTnode>> Else = {};
+
+    while((curr.first != "end_if")) //keep on adding following ASTnodes to the Then block until the "end_if" flag is detected
+    {
+      unique_ptr<ASTnode> node = std::move(processStmtList());
+      if(node != nullptr)
+        Then.push_back(std::move(node));
+    }
+
+    if(curr.first == "end_if") //skip this flag
+    {
+      curr = std::move(stmtList.front());
+      stmtList.pop_front();
+    }
+
+    if(curr.first == "no_else") //this flag means that no Else block exists, so return the If ASTnode with a filled Then block, and empty Else block
+    {
+      return std::move(make_unique<IfExprASTnode>(std::move(cond),std::move(Then),std::move(Else)));
+    }
+    else if(curr.first == "else") //this flag means that an Else block exists
+    {
+      while(curr.first != "end_else") //keep on adding following ASTnodes to the Else block until the "end_else" flag is detected
+      {
+        unique_ptr<ASTnode> node = std::move(processStmtList());
+        if(node != nullptr)
+          Else.push_back(std::move(node));
+      }
+    } 
+
+    if(curr.first == "end_else") //flag signified end of Else block
+    {
+      curr.first = ""; //acknowledge end of else
+      return std::move(make_unique<IfExprASTnode>(std::move(cond),std::move(Then),std::move(Else))); //return If ASTnode with filled Then and Else blocks
+    }
+    else
+    {
+      return nullptr;
+    }
+
+  }
+  else if(curr.first == "return") //create a returnExpr node for return statements
+  {
+    unique_ptr<ASTnode> returnExpr = processStmtList();
+    TOKEN returnTok = nullToken;
+    if(returnExpr != nullptr)
+      returnTok = returnExpr->getTok();
+    unique_ptr<ReturnExprASTnode> returnNode = make_unique<ReturnExprASTnode>(std::move(returnExpr),functiontype, returnTok);
+    return std::move(returnNode);
+  }
+  else return std::move(nullptr); //if value in stmt_list is unrecognisable, return nullptr
+} 
+
+//Function which uses the processStmtList() to add control flow AST nodes to the body of parent function
+void addToBody()
+{
+  while(stmtList.size() != 0)
+  {
+    unique_ptr<ASTnode> ptr = std::move(processStmtList());
+    if(ptr != nullptr)
+      body.push_back(std::move(ptr));
+  }
+}
+
+//Used to determine precedence of input operator
+int getPrecedence(string op)
+{
+  if(op == "*" | op == "/" | op == "%") //highest precedence
+    return 70;
+  else if(op == "+" | op == "-")
+    return 60;
+  else if(op == "<=" | op == "<" | op == ">=" | op == ">")
+    return 50;
+  else if(op == "==" | op == "!=")
+    return 40;
+  else if(op == "&&")
+    return 30;
+  else if(op == "||")
+    return 20;
+  else if(op == "=") //lowest precedence
+    return 10;
+  else
+    return 110; //invalid (not an operator)
+}
+
+//This helper function is used to check if first left paranthesis is closed by the right paranthesis at the end of the expression
+bool isMatchingLastParam(vector<TOKEN> expression)
+{
+  int buf = 0;
+  for(int i = 1; i < expression.size(); i++)
+  {
+    if(expression.at(i).type == RPAR && buf == 0)
+    {
+      if(i == expression.size() - 1)
+        return true;
+      else
+        return false;
+    }
+    else if(expression.at(i).type == RPAR && buf > 0)
+    {
+      buf--;
+    }
+    else if(expression.at(i).type == LPAR)
+    {
+      buf++;
+    } 
+  }
+  return false;
+}
+
+//Essential helper function used to parse expressions and create correct AST nodes
+unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
+{
+  if(expression.size() == 1) //literals
+  {
+    TOKEN t = expression.at(0);
+    if(t.type == INT_LIT) //for int literals
+    {
+      int val;
+      try{ //make sure that the string conversion results in a value that is within the valid integer range
+         val = stoi(t.lexeme);
+      }
+      catch(std::out_of_range) //otherwise, set the value to 0 to avoid undefined values
+      {
+        errs()<<"Warning: Value "<<t.lexeme<<" out of range for int type. Setting it to 0\n";
+        val = stoi("0");
+      }
+      
+      return std::move(make_unique<IntASTnode>(t,val)); //return IntAST node
+    }
+    else if(t.type == FLOAT_LIT) //for int literals
+    {
+      float val;
+      try{ //make sure that the string conversion results in a value that is within the valid float range
+         val = stof(t.lexeme);
+      }
+      catch(std::out_of_range) //otherwise, set the value to 0.0 to avoid undefined values
+      {
+        errs()<<"Warning: Value "<<t.lexeme<<" out of range for float type. Setting it to 0.0\n";
+        val = stof("0.0");
+      }
+      return std::move(make_unique<FloatASTnode>(t,val));
+    }
+    else if(t.type == BOOL_LIT) //for boolean literals, true or false
+    {
+      if(t.lexeme == "true")
+        return make_unique<BoolASTnode>(t,true);
+      else if(t.lexeme == "false")
+        return make_unique<BoolASTnode>(t,false);
+    }
+    else if(t.type == IDENT)
+    {
+      return std::move(make_unique<VariableReferenceASTnode>(t,t.lexeme));
+    }
+    else
+    {
+      return std::move(nullptr);
+    }
+  }
+  //for unary expressions 
+  else if((expression.at(0).lexeme == "-" | expression.at(0).lexeme == "!") & (expression.at(1).lexeme == "-" | expression.at(1).lexeme == "!" | expression.at(1).lexeme == "(" | expression.size() == 2)) 
+  {
+    string opcode = expression.at(0).lexeme;
+    vector<TOKEN> operand = {}; //this can either be a single value or a long expression that needs to be parsed recursively
+    for(int i = 1; i < expression.size(); i++)
+      operand.push_back(expression.at(i));
+
+    return std::move(make_unique<UnaryExprASTnode>(opcode,std::move(createExprASTnode(operand)),expression.at(0))); //return UnaryExprASTnode with opcode and operand(s)
+  }
+  else if((expression.at(0).lexeme == "(") & (isMatchingLastParam(expression) == true)) //for bracketed expr from start to end e.g (a + d + (a+f)), not (a+f)+(-e+d)
+  {
+    vector<TOKEN> newExpr = {}; //remove the first and last parantheses
+    for(int i = 1; i < expression.size() - 1; i++)
+    {
+      newExpr.push_back(expression.at(i)); 
+    } 
+    return std::move(createExprASTnode(newExpr)); //parse resulting expression and return it
+  }
+  else if((expression.at(0).type == IDENT) & (expression.at(1).type == LPAR)) //function call with or without arguments
+  {
+    TOKEN funcTok = expression.at(0); //save identifier token to store in ASTnode, for use in printing out errors
+
+    string callee = expression.at(0).lexeme; //get function callee name
+
+    vector<unique_ptr<ASTnode>> args = {};
+    vector<TOKEN> expr = {};
+    bool start = false;
+    if(expression.at(2).type != RPAR) //if function call has arguments
+    {
+      for(int i = 2; i < expression.size(); i++) //ignoring first LPAR and last RPAR
+      {
+        if(i==2)
+          start = true;
+
+        if(i == expression.size()-1)
+        {
+          start = false;
+          args.push_back(std::move(createExprASTnode(expr))); //parse expr and add to args
+          expr.clear();
+        }
+
+        if(expression.at(i).type == COMMA)
+        {
+          args.push_back(std::move(createExprASTnode(expr))); //parse expr and add to args
+          expr.clear();
+        }
+        else
+        {
+          if(start == true)
+          {
+            expr.push_back(expression.at(i));
+          }
+        }
+      }
+    }
+      return std::move(make_unique<FuncCallASTnode>(callee,std::move(args),funcTok)); //return FuncCallASTnode
+  }
+  else 
+  {
+    int minPrecedence = 100;
+    string op = "";
+    TOKEN opTok;
+    int index = 0;
+    bool isOp = true;
+    bool unaryEnd = true;
+    int valid = 0; //operators inside bracketed expressions are invalid so value set to 1, otherwise set to 0
+    for(int i = 0; i < expression.size(); i++)
+    {
+      int currPrecedence = getPrecedence(expression.at(i).lexeme);
+      if(expression.at(i).lexeme == "(") 
+      {
+        valid++; //don't parse bracket expressions here
+      }
+      if(expression.at(i).lexeme == ")")
+      {
+        valid--;
+      }
+      if(currPrecedence != 110) //operator found
+      {
+        if((currPrecedence <= minPrecedence) & (isOp == false) & (valid == 0)) //get lowest precedence operator, avoiding any unary operators
+        { 
+          op = expression.at(i).lexeme;
+          opTok = expression.at(i);
+          minPrecedence = currPrecedence;
+          index = i;
+          if(op == "=") //stop at the earliest `=` token
+          {
+            break;
+          }
+        }
+        isOp = true;
+      }
+      else
+      {
+        isOp = false;
+      }
+    }
+
+    //split expression into two parts, either side of the operator
+    vector<TOKEN> lhs = {};
+    vector<TOKEN> rhs = {};
+    for(int i = 0; i < index; i++)
+    {
+      lhs.push_back(expression.at(i)); 
+    }
+    for(int i = index+1; i < expression.size(); i++)
+    {
+      rhs.push_back(expression.at(i));
+    }
+
+    return std::move(make_unique<BinaryExprASTnode>(op, std::move(createExprASTnode(lhs)), std::move(createExprASTnode(rhs)),opTok)); //recursive call to parse both the lhs and rhs of the expression
+  }
+  return nullptr;
+}
 
 //===----------------------------------------------------------------------===//
-// Recursive Descent Parser - Function call for each production
+// FIRST sets for each production rule
 //===----------------------------------------------------------------------===//
 
-/* FIRST() sets*/
 vector<TOKEN_TYPE> FIRST_extern_list{EXTERN};
 
 vector<TOKEN_TYPE> FIRST_extern_list_prime{EXTERN};
@@ -1083,7 +1382,10 @@ vector<TOKEN_TYPE> FIRST_arg_list{MINUS, NOT, LPAR, IDENT, INT_LIT, FLOAT_LIT, B
 
 vector<TOKEN_TYPE> FIRST_arg_list_prime{COMMA};
 
-/* FOLLOW() sets*/
+//===----------------------------------------------------------------------===//
+// FOLLOW sets for production rules with an epsilon production
+//===----------------------------------------------------------------------===//
+
 vector<TOKEN_TYPE> FOLLOW_extern_list_prime{VOID_TOK,INT_TOK,FLOAT_TOK,BOOL_TOK};
 
 vector<TOKEN_TYPE> FOLLOW_decl_list_prime{EOF_TOK};
@@ -1118,515 +1420,9 @@ vector<TOKEN_TYPE> FOLLOW_args{RPAR};
 
 vector<TOKEN_TYPE> FOLLOW_arg_list_prime{RPAR};
 
-
-/* Helper functions for parser and AST generation*/
-
-static bool contains(int type, vector<TOKEN_TYPE> list)
-{
-  for(int i = 0; i < list.size(); i++)
-  {
-    if(list[i] == type)
-      return true;
-  }
-  return false;
-}
-
-bool match(TOKEN_TYPE token)
-{
-  if(CurTok.type == token)
-  {
-    getNextToken(); //consume token
-    return true;
-  }
-  else
-    return false;
-}
-
-void addFunctionAST()
-{
-  //define functionAST and add to root
-  prototypeName.append(functiontype + " " + functionIdent.lexeme);
-  resetFunctionIdent();
-  resetFunctiontype();
-  unique_ptr<PrototypeAST> Proto = std::make_unique<PrototypeAST>(prototypeName,std::move(argumentList));
-  resetArgumentList();
-  resetPrototypeName();
-  resetFunctiontype();
-  unique_ptr<FunctionAST> Func = std::make_unique<FunctionAST>(std::move(Proto),std::move(body));
-  resetBody();
-  root.push_back(std::move(Func));
-}
-
-void printStmtList()
-{
-  for(int i = 0; i < stmtList.size(); i++)
-  {
-    cout<<stmtList.at(i).first<<endl;
-  }
-}
-
-static std::pair<std::string, std::unique_ptr<ASTnode>> curr;
-unique_ptr<ASTnode> processStmtList()
-{
-  if(stmtList.size() > 0)
-  {
-    curr = std::move(stmtList.front());
-    stmtList.pop_front();
-  }
-  else
-  {
-    return nullptr;
-  }
-  cout<<"Curr: "<<curr.first<<"size "<<stmtList.size()<<endl;
-  // if((curr.first == "end_while") | (curr.first == "end_if") | (curr.first == "end_else"))//ignore "new"
-  // {
-  //   // cout<<"Discard: "<<curr.first<<endl;
-  //   curr = std::move(stmtList.front());
-  //   // cout<<"NewCurr: "<<curr.first<<endl;
-  //   stmtList.pop_front();
-  // }
-  cout<<"FinalCurr: "<<curr.first<<endl;
-  if(curr.first == "vardecl")
-  {
-    return std::move(curr.second);
-  }
-  else if(curr.first == "expr")
-  {
-    return std::move(curr.second);
-  }
-  else if(curr.first == "while")
-  {
-    cout<<"start while"<<endl;
-    unique_ptr<ASTnode> cond = processStmtList();
-    vector<unique_ptr<ASTnode>> then = {};
-    while(curr.first != "end_while")
-    {
-      unique_ptr<ASTnode> node = std::move(processStmtList());
-      if(node != nullptr)
-        then.push_back(std::move(node));
-    }
-    cout<<"exit while"<<endl;
-    if(curr.first == "end_while")
-    {
-      // curr = std::move(stmtList.front());
-      // stmtList.pop_front();
-      curr.first = ""; //acknowledge end of while
-      return std::move(make_unique<WhileExprASTnode>(std::move(cond),std::move(then)));
-    }
-    else
-    {
-      cout<<"ERRORRRRRRRRRRRRRRR!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<endl;
-      return nullptr;
-    }
-    
-  }
-  else if(curr.first == "if")
-  {
-    cout<<"start if"<<endl;
-    unique_ptr<ASTnode> cond = processStmtList();
-    vector<unique_ptr<ASTnode>> Then = {};
-    vector<unique_ptr<ASTnode>> Else = {};
-    while((curr.first != "end_if"))
-    {
-      unique_ptr<ASTnode> node = std::move(processStmtList());
-      if(node != nullptr)
-        Then.push_back(std::move(node));
-    }
-    cout<<"exit if then"<<endl;
-
-    if(curr.first == "end_if")
-    {
-      curr = std::move(stmtList.front());
-      stmtList.pop_front();
-    }
-
-    if(curr.first == "no_else")
-    {
-      return std::move(make_unique<IfExprASTnode>(std::move(cond),std::move(Then),std::move(Else)));
-    }
-    else if(curr.first == "else")
-    {
-      cout<<"start else"<<endl;
-      while(curr.first != "end_else")
-      {
-        // cout<<"WHAT IS IT::"<<curr.first<<endl;
-      unique_ptr<ASTnode> node = std::move(processStmtList());
-      if(node != nullptr)
-        Else.push_back(std::move(node));
-      }
-      cout<<"exit else then"<<endl;
-    } 
-    cout<<"exit if"<<endl; 
-
-    if(curr.first == "end_else")
-    {
-      curr.first = ""; //acknowledge end of else
-      // curr = std::move(stmtList.front());
-      // stmtList.pop_front();
-      return std::move(make_unique<IfExprASTnode>(std::move(cond),std::move(Then),std::move(Else)));
-    }
-    else
-    {
-      cout<<"ERRORRRRRRRRRRRRRRR!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<endl;
-      return nullptr;
-    }
-
-  }
-  else if(curr.first == "return")
-  {
-    // return std::move(curr.second);
-    unique_ptr<ASTnode> returnExpr = processStmtList();
-    TOKEN returnTok = nullToken;
-    if(returnExpr != nullptr)
-      returnTok = returnExpr->getTok();
-    unique_ptr<ReturnExprASTnode> returnNode = make_unique<ReturnExprASTnode>(std::move(returnExpr),functiontype, returnTok);
-    return std::move(returnNode);
-  }
-  else return std::move(nullptr);
-} 
-
-void addToBody()
-{
-  while(stmtList.size() != 0)
-  {
-    cout<<"stmt size: "<<stmtList.size()<<endl;
-    // printStmtList();
-    unique_ptr<ASTnode> ptr = std::move(processStmtList());
-    if(ptr != nullptr)
-      body.push_back(std::move(ptr));
-    cout<<stmtList.size()<<endl;
-  }
-}
-
-//static int expr_index = 0;
-
-
-// string peekNextExprToken(vector<string> )
-// {
-//   string peek = expression.at(expr_index);
-//   // if(expr_index < expression.size())
-//   //   expr_index++;
-//   return peek;
-// }
-
-int getPrecedence(string op)
-{
-  if(op == "*" | op == "/" | op == "%")
-    return 70;
-  else if(op == "+" | op == "-")
-    return 60;
-  else if(op == "<=" | op == "<" | op == ">=" | op == ">")
-    return 50;
-  else if(op == "==" | op == "!=")
-    return 40;
-  else if(op == "&&")
-    return 30;
-  else if(op == "||")
-    return 20;
-  else if(op == "=")
-    return 10;
-  else
-    return 110; //invalid
-}
-
-bool isMatchingLastParam(vector<TOKEN> expression)
-{
-  int buf = 0;
-  for(int i = 1; i < expression.size(); i++)
-  {
-    if(expression.at(i).type == RPAR && buf == 0)
-    {
-      cout<<i<<"compared to"<<expression.size()-1<<endl;
-        cout<<"ofund"<<endl;
-      if(i == expression.size() - 1)
-      {
-        cout<<"Yes mate"<<endl;
-        return true;
-      }
-      else
-      {
-        cout<<"Nah mate"<<endl;
-        return false;
-      }
-    }
-    else if(expression.at(i).type == RPAR && buf > 0)
-    {
-      buf--;
-    }
-    else if(expression.at(i).type == LPAR)
-    {
-      buf++;
-    }
-
-    
-  }
-  cout<<"nope"<<endl;
-  return false;
-}
-
-void checkForUnary() //adds parentheses over unary expressions to assert correct precedence
-{
-  bool isOp = false;
-  int valid = 0;
-  bool unaryEnd = true;
-  for(auto i = 0; i < expression.size(); i++)
-  {
-    TOKEN curr = expression.at(i);
-    if(curr.lexeme == "(") 
-    {
-      valid++;
-    }
-    if(curr.lexeme == ")")
-    {
-      valid--;
-    }
-    if(getPrecedence(curr.lexeme) != 110) //operator found
-    {
-      if(isOp == true & unaryEnd == true & valid == 0)
-      {
-        auto itPos = expression.begin() + i;
-        expression.insert(itPos,insertLPAR);
-        cout<<expression.at(i).lexeme<<endl;
-        if(i != expression.size()-1)
-          i++;
-        unaryEnd = false;
-      }
-      if(isOp == false & unaryEnd == false & valid == 0)
-      {
-        auto itPos = expression.begin() + i;
-        expression.insert(itPos,insertRPAR);
-        i++;
-        unaryEnd = true;
-      }
-      isOp = true;
-    }
-    else
-    {
-      isOp = false;
-    }
-    if(i == expression.size()-1 & unaryEnd == false)
-    {
-      auto itPos = expression.begin() + i;
-      expression.insert(itPos,insertRPAR);
-      unaryEnd = true;
-    }
-  }
-}
-
-void printExpression(vector<TOKEN> exp)
-{
-  for(int i = 0; i < exp.size(); i++)
-  {
-    cout<<exp.at(i).lexeme<<endl;
-  }
-}
-
-unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
-{
-  if(expression.size() == 1) //literals
-  {
-    TOKEN t = expression.at(0);
-    if(t.type == INT_LIT)
-    {
-      int val;
-      try{
-         val = stoi(t.lexeme);
-      }
-      catch(std::out_of_range)
-      {
-        errs()<<"Warning: Value "<<t.lexeme<<" out of range for int type. Setting it to 0\n";
-        val = stoi("0");
-      }
-      
-      return std::move(make_unique<IntASTnode>(t,val));
-    }
-    else if(t.type == FLOAT_LIT)
-    {
-      float val;
-      try{
-         val = stof(t.lexeme);
-      }
-      catch(std::out_of_range)
-      {
-        errs()<<"Warning: Value "<<t.lexeme<<" out of range for float type. Setting it to 0.0\n";
-        val = stof("0.0");
-      }
-      return std::move(make_unique<FloatASTnode>(t,val));
-    }
-    else if(t.type == BOOL_LIT)
-    {
-      if(t.lexeme == "true")
-        return make_unique<BoolASTnode>(t,true);
-      else if(t.lexeme == "false")
-        return make_unique<BoolASTnode>(t,false);
-    }
-    else if(t.type == IDENT)
-    {
-      return std::move(make_unique<VariableReferenceASTnode>(t,t.lexeme));
-    }
-    else
-    {
-      return std::move(nullptr);
-    }
-  }
-  else if((expression.at(0).lexeme == "-" | expression.at(0).lexeme == "!") & (expression.at(1).lexeme == "-" | expression.at(1).lexeme == "!" | expression.at(1).lexeme == "(" | expression.size() == 2)) //unary
-  {
-    cout<<"unary"<<endl;
-    string opcode = expression.at(0).lexeme;
-    vector<TOKEN> operand = {};
-    for(int i = 1; i < expression.size(); i++)
-      operand.push_back(expression.at(i));
-
-    return std::move(make_unique<UnaryExprASTnode>(opcode,std::move(createExprASTnode(operand)),expression.at(0)));
-  }
-  else if((expression.at(0).lexeme == "(") & (isMatchingLastParam(expression) == true)) //bracketed expr - start to end e.g (a + d + (a+f)) not (a+f)+(-e+d)
-  {
-    cout<<"bracketed expr"<<endl;
-    vector<TOKEN> newExpr = {};
-    for(int i = 1; i < expression.size() - 1; i++)
-    {
-      newExpr.push_back(expression.at(i));
-    } 
-    return std::move(createExprASTnode(newExpr));
-  }
-  else if((expression.at(0).type == IDENT) & (expression.at(1).type == LPAR)) //function call with or without arguments
-  {
-    TOKEN funcTok = expression.at(0);
-    string callee = expression.at(0).lexeme;
-    // if(expression.size() > 1)
-    // {
-      cout<<callee<<endl;
-      // cout<<expression.at(0).lexeme<<endl;
-      // cout<<expression.at(1).lexeme<<endl;
-      // cout<<expression.at(2).lexeme<<endl;
-      vector<unique_ptr<ASTnode>> args = {};
-      vector<TOKEN> expr = {};
-      bool start = false;
-      if(expression.at(2).type != RPAR) //if function call has arguments
-      {
-      for(int i = 2; i < expression.size(); i++) //ignoring first LPAR and last RPAR
-      {
-        if(i==2)
-          start = true;
-
-         if(i == expression.size()-1)
-         {
-          start = false;
-          args.push_back(std::move(createExprASTnode(expr))); //parse expr and add to args
-          expr.clear();
-         }
-
-        if(expression.at(i).type == COMMA)
-        {
-          args.push_back(std::move(createExprASTnode(expr))); //parse expr and add to args
-          expr.clear();
-        }
-        else
-        {
-          if(start == true)
-          {
-            expr.push_back(expression.at(i));
-            cout<<expression.at(i).lexeme<<endl;
-          }
-        }
-      }
-      }
-      return std::move(make_unique<FuncCallASTnode>(callee,std::move(args),funcTok));
-    // }
-    // else //no args
-    // {
-    //   return std::move(make_unique<FuncCallASTnode>(callee,std::move(args)));
-    // }
-  }
-  else //TESTT
-  {
-    int minPrecedence = 100;
-    string op = "";
-    TOKEN opTok;
-    int index = 0;
-    bool isOp = true;
-    bool unaryEnd = true;
-    int valid = 0; //operators inside bracketed expressions are invalid
-    for(int i = 0; i < expression.size(); i++)
-    {
-      int currPrecedence = getPrecedence(expression.at(i).lexeme);
-      if(expression.at(i).lexeme == "(") 
-      {
-        valid++;
-      }
-      if(expression.at(i).lexeme == ")")
-      {
-        valid--;
-      }
-      if(currPrecedence != 110) //operator found
-      {
-        // if(isOp == true & unaryEnd == true & valid == 0)
-        // {
-        //   auto itPos = expression.begin() + i;
-        //   expression.insert(itPos,insertLPAR);
-        //   cout<<expression.at(i).lexeme<<endl;
-        //   if(i != expression.size()-1)
-        //     i++;
-        //   unaryEnd = false;
-        // }
-
-        // if(isOp == false & unaryEnd == false & valid == 0)
-        // {
-        //   auto itPos = expression.begin() + i;
-        //   expression.insert(itPos,insertRPAR);
-        //   if(i != expression.size()-1)
-        //     i++;
-        //   unaryEnd = true;
-        // }
-
-        if((currPrecedence <= minPrecedence) & (isOp == false) & (valid == 0)) //get lowest precedence operator, avoiding any unary operators
-        { 
-          op = expression.at(i).lexeme;
-          opTok = expression.at(i);
-          // cout<<op<<endl;
-          minPrecedence = currPrecedence;
-          //cout<<minPrecedence<<endl;
-          index = i;
-          if(op == "=") //stop at the earliest `=` token
-          {
-            break;
-          }
-        }
-        isOp = true;
-      }
-      else
-      {
-        isOp = false;
-      }
-      if(i == expression.size()-1 & unaryEnd == false)
-      {
-        auto itPos = expression.begin() + i;
-        expression.insert(itPos,insertRPAR);
-        unaryEnd = true;
-      }
-      
-    }
-
-    vector<TOKEN> lhs = {};
-    vector<TOKEN> rhs = {};
-    for(int i = 0; i < index; i++)
-    {
-      lhs.push_back(expression.at(i));
-    }
-    for(int i = index+1; i < expression.size(); i++)
-    {
-      rhs.push_back(expression.at(i));
-    }
-
-    cout<<op<<endl;
-    // cout<<"printing"<<endl;
-    // printExpression(expression);
-    return std::move(make_unique<BinaryExprASTnode>(op, std::move(createExprASTnode(lhs)), std::move(createExprASTnode(rhs)),opTok)); //recursive
-  }
-  return nullptr; //error
-}
-
-/* Function calls for each production */
+//===----------------------------------------------------------------------===//
+// Recursive Descent Parser - Using function calls for each production
+//===----------------------------------------------------------------------===//
 
 bool p_extern_list(); bool p_extern_list_prime();
 bool p_extern();
@@ -1659,11 +1455,13 @@ bool p_rval_three(); bool p_rval_three_prime();
 bool p_rval_two(); bool p_rval_one(); bool p_rval();
 bool p_args(); bool p_arg_list(); bool p_arg_list_prime();
 
+/* Defining functions for each production */
+
+/// arg_list' ::= "," arg_list | epsilon
 bool p_arg_list_prime()
 {
   if(CurTok.type == COMMA)
   {
-    //return match(COMMA) & p_arg_list();
     TOKEN temp = CurTok;
     if(!match(COMMA))
     {
@@ -1681,7 +1479,7 @@ bool p_arg_list_prime()
   {
     if(contains(CurTok.type, FOLLOW_arg_list_prime))
     {
-      cout<<"eat"<<endl;
+      //consume token
       return true;
     }
     else
@@ -1694,11 +1492,13 @@ bool p_arg_list_prime()
   }
 }
 
+///arg_list ::= expr arg_list'
 bool p_arg_list()
 {
   return p_expr() & p_arg_list_prime();
 }
 
+///args ::= arg_list | epsilon
 bool p_args()
 {
   if(contains(CurTok.type,FIRST_arg_list))
@@ -1707,7 +1507,7 @@ bool p_args()
   {
     if(contains(CurTok.type,FOLLOW_args))
     {
-      cout<<"eat"<<endl;
+      //consume token
       return true;
     }
     else
@@ -1720,12 +1520,11 @@ bool p_args()
   }
 }
 
+///rval ::= "(" args ")" | epsilon
 bool p_rval()
 {
-  cout<<"rval"<<endl;
   if(CurTok.type == LPAR)
   {
-    //return match(LPAR) & p_args() & match(RPAR);
     TOKEN temp = CurTok;
     if(!match(LPAR))
     {
@@ -1762,7 +1561,7 @@ bool p_rval()
   {
     if(contains(CurTok.type,FOLLOW_rval))
     {
-      cout<<"eat"<<endl;
+      //consume token
       return true;
     }
     else
@@ -1775,13 +1574,11 @@ bool p_rval()
   }
 }
 
+///rval_one ::= "(" expr ")" | IDENT rval | INT_LIT | FLOAT_LIT | BOOL_LIT 
 bool p_rval_one()
 {
-  cout<<"rval_one"<<endl;
-  // cout<<CurTok.type<<endl;
   if(CurTok.type == LPAR)
   {
-    //return match(LPAR) & p_expr() & match(RPAR);
     TOKEN temp = CurTok;
     if(!match(LPAR))
     {
@@ -1815,7 +1612,6 @@ bool p_rval_one()
   }
   else if(CurTok.type == IDENT)
   {
-    // return match(IDENT) & p_rval();
     variableIdent = CurTok;
     if(!match(IDENT))
     {
@@ -1832,7 +1628,6 @@ bool p_rval_one()
   }
   else if(CurTok.type == INT_LIT)
   {
-    // return match(INT_LIT);
     variableIdent = CurTok;
     if(!match(INT_LIT))
     {
@@ -1849,7 +1644,6 @@ bool p_rval_one()
   }
   else if(CurTok.type == FLOAT_LIT)
   {
-    // return match(FLOAT_LIT);
     variableIdent = CurTok;
     if(!match(FLOAT_LIT))
     {
@@ -1866,7 +1660,6 @@ bool p_rval_one()
   }
   else if(CurTok.type == BOOL_LIT)
   {
-    // return match(BOOL_LIT);
     variableIdent = CurTok;
     if(!match(BOOL_LIT))
     {
@@ -1890,13 +1683,11 @@ bool p_rval_one()
   }
 }
 
-
+/// rval_two ::= "-" rval_two | "!" rval_two | rval_one
 bool p_rval_two()
 {
-  cout<<"rval_two"<<endl;
   if(CurTok.type == MINUS)
   {
-    //return match(MINUS) & p_rval_two();
     TOKEN temp = CurTok;
     if(!match(MINUS))
     {
@@ -1906,13 +1697,11 @@ bool p_rval_two()
       return false;
     }
 
-    //unary.append("-");
     expression.push_back(temp);
     return p_rval_two();
   }
   else if(CurTok.type == NOT)
   {
-    //return match(NOT) & p_rval_two();
     TOKEN temp = CurTok;
     if(!match(NOT))
     {
@@ -1922,7 +1711,6 @@ bool p_rval_two()
       return false;
     }
 
-    //unary.append("!");
     expression.push_back(temp);
     return p_rval_two();
   }
@@ -1939,18 +1727,17 @@ bool p_rval_two()
   }
 }
 
+/// rval_three ::= rval_two rval_three'
 bool p_rval_three()
 {
-  cout<<"rval_three"<<endl;
   return p_rval_two() & p_rval_three_prime();
 }
 
+/// rval_three' ::= "*" rval_two rval_three' | "/" rval_two rval_three' | "%" rval_two rval_three' | epsilon
 bool p_rval_three_prime()
 {
-  cout<<"rval_three'"<<endl;
   if(CurTok.type == ASTERIX)
   {
-    // return match(ASTERIX) & p_rval_two() & p_rval_three_prime();
     TOKEN temp = CurTok;
     if(!match(ASTERIX))
     {
@@ -1976,7 +1763,6 @@ bool p_rval_three_prime()
     
     expression.push_back(temp);
     return p_rval_two() & p_rval_three_prime();
-    // return match(DIV) & p_rval_two() & p_rval_three_prime();
   }
   else if(CurTok.type == MOD)
   {
@@ -1991,13 +1777,12 @@ bool p_rval_three_prime()
     
     expression.push_back(temp);
     return p_rval_two() & p_rval_three_prime();
-    // return match(MOD) & p_rval_two() & p_rval_three_prime();
   }
   else
   {
     if(contains(CurTok.type,FOLLOW_rval_three_prime))
     {
-      cout<<"eat"<<endl;
+      //consume token
       return true;
     }
     else
@@ -2010,19 +1795,19 @@ bool p_rval_three_prime()
   }
 }
 
+
+/// rval_four ::= rval_three rval_four'
 bool p_rval_four()
 {
-  cout<<"rval_four"<<endl;
   return p_rval_three() & p_rval_four_prime();
 }
 
+
+/// rval_four' ::= "+" rval_three rval_four' | "-" rval_three rval_four' | epsilon
 bool p_rval_four_prime()
 {
-  cout<<"rval_four'"<<endl;
-  // cout<<CurTok.type<<endl;
   if(CurTok.type == PLUS)
   {
-    //return match(PLUS) & p_rval_three() & p_rval_four_prime();
     TOKEN temp = CurTok;
     if(!match(PLUS))
     {
@@ -2038,7 +1823,6 @@ bool p_rval_four_prime()
   }
   else if(CurTok.type == MINUS)
   {
-    //return match(MINUS) & p_rval_three() & p_rval_four_prime();
     TOKEN temp = CurTok;
     if(!match(MINUS))
     {
@@ -2056,7 +1840,7 @@ bool p_rval_four_prime()
   {
     if(contains(CurTok.type,FOLLOW_rval_four_prime))
     {
-      cout<<"eat"<<endl;
+      //consume token
       return true;
     }
     else
@@ -2069,18 +1853,19 @@ bool p_rval_four_prime()
   }
 }
 
+
+/// rval_five ::= rval_four rval_five'
 bool p_rval_five()
 {
-  cout<<"rval_five"<<endl;
   return p_rval_four() & p_rval_five_prime();
 }
 
+
+/// rval_five' ::= "<=" rval_four rval_five' | "<" rval_four rval_five' | ">=" rval_four rval_five' | ">" rval_four rval_five' | epsilon
 bool p_rval_five_prime()
 {
-  cout<<"rval_five'"<<endl;
   if(CurTok.type == LE)
   {
-    // return match(LE) & p_rval_four() & p_rval_five_prime();
     TOKEN temp = CurTok;
     if(!match(LE))
     {
@@ -2095,7 +1880,6 @@ bool p_rval_five_prime()
   }
   else if(CurTok.type == LT)
   {
-    //return match(LT) & p_rval_four() & p_rval_five_prime();
     TOKEN temp = CurTok;
     if(!match(LT))
     {
@@ -2110,7 +1894,6 @@ bool p_rval_five_prime()
   }
   else if(CurTok.type == GE)
   {
-    //return match(GE) & p_rval_four() & p_rval_five_prime();
     TOKEN temp = CurTok;
     if(!match(GE))
     {
@@ -2125,7 +1908,6 @@ bool p_rval_five_prime()
   }
   else if(CurTok.type == GT)
   {
-    //return match(GT) & p_rval_four() & p_rval_five_prime();
     TOKEN temp = CurTok;
     if(!match(GT))
     {
@@ -2142,7 +1924,7 @@ bool p_rval_five_prime()
   {
     if(contains(CurTok.type,FOLLOW_rval_five_prime))
     {
-      cout<<"eat"<<endl;
+      //consume token
       return true;
     }
     else
@@ -2155,18 +1937,20 @@ bool p_rval_five_prime()
   }
 }
 
+
+/// rval_six ::= rval_five rval_six'
 bool p_rval_six()
 {
-  cout<<"rval_six"<<endl;
   return p_rval_five() & p_rval_six_prime();
 }
 
+
+
+/// rval_six' ::= "==" rval_five rval_six' | "!=" rval_five rval_six' | epsilon
 bool p_rval_six_prime()
 {
-  cout<<"rval_six'"<<endl;
   if(CurTok.type == EQ)
   {
-    //return match(EQ) & p_rval_five() & p_rval_six_prime();
     TOKEN temp = CurTok;
     if(!match(EQ))
     {
@@ -2200,7 +1984,7 @@ bool p_rval_six_prime()
   {
     if(contains(CurTok.type,FOLLOW_rval_six_prime))
     {
-      cout<<"eat"<<endl;
+      //consume token
       return true;
     }
     else
@@ -2213,18 +1997,21 @@ bool p_rval_six_prime()
   }
 }
 
+
+
+/// rval_seven ::= rval_six rval_seven'
 bool p_rval_seven()
 {
-  cout<<"rval_seven"<<endl;
   return p_rval_six() & p_rval_seven_prime();
 }
 
+
+
+/// rval_seven' ::= "&&" rval_six rval_seven' | epsilon
 bool p_rval_seven_prime()
 {
-  cout<<"rval_seven'"<<endl;
   if(CurTok.type == AND)
   {
-    //return match(AND) & p_rval_six() & p_rval_seven_prime();
     TOKEN temp = CurTok;
     if(!match(AND))
     {
@@ -2242,7 +2029,7 @@ bool p_rval_seven_prime()
   {
     if(contains(CurTok.type,FOLLOW_rval_seven_prime))
     {
-      cout<<"eat"<<endl;
+      //consume token
       return true;
     }
     else
@@ -2255,18 +2042,19 @@ bool p_rval_seven_prime()
   }
 }
 
+
+/// rval_eight ::= rval_seven rval_eight'
 bool p_rval_eight()
 {
-  cout<<"rval_eight"<<endl;
   return p_rval_seven() & p_rval_eight_prime();
 }
 
+
+/// rval_eight' ::= "||" rval_seven rval_eight' | epsilon
 bool p_rval_eight_prime()
 {
-  cout<<"rval_eight'"<<endl;
   if(CurTok.type == OR)
   {
-    //return match(OR) & p_rval_seven() & p_rval_eight_prime();
     TOKEN temp = CurTok;
     if(!match(OR))
     {
@@ -2300,7 +2088,7 @@ bool p_rval_eight_prime()
   {
     if(contains(CurTok.type,FOLLOW_rval_eight_prime))
     {
-      cout<<"eat"<<endl;
+      //consume token
       return true;
     }
     else
@@ -2313,9 +2101,10 @@ bool p_rval_eight_prime()
   }
 }
 
+
+/// return_stmt' ::= ";" | expr ";" 
 bool p_return_stmt_prime()
 {
-  cout<<"return_stmt'"<<endl;
   if(CurTok.type == SC)
   {
     if(!match(SC))
@@ -2330,7 +2119,6 @@ bool p_return_stmt_prime()
   }
   else if(contains(CurTok.type,FIRST_expr))
   {
-    // return p_expr() & match(SC);
     if(!p_expr())
     {
       if(!errorReported)
@@ -2339,9 +2127,6 @@ bool p_return_stmt_prime()
       return false;
     }
     
-    // //checkForUnary();
-    cout<<"Printing"<<endl;
-    //printExpression();
     unique_ptr<ASTnode> expr = createExprASTnode(expression);
     pair <string,unique_ptr<ASTnode>> p = make_pair("expr",std::move(expr));
     stmtList.push_back(std::move(p));
@@ -2366,10 +2151,10 @@ bool p_return_stmt_prime()
   }
 }
 
+
+/// return_stmt ::= "return" return_stmt' 
 bool p_return_stmt()
 {
-  cout<<"return_stmt"<<endl;
-  //return match(RETURN) & p_return_stmt_prime();
   if(!match(RETURN))
   {
     if(!errorReported)
@@ -2388,17 +2173,14 @@ bool p_return_stmt()
     errorReported = true;
     return false;
   }
-  
-  // pair <string,unique_ptr<ASTnode>> n = make_pair("end_return",std::move(nullptr));
-  // stmtList.push_back(std::move(n));
 
   return true;
 }
 
+
+/// expr ::= exprStart rval_eight
 bool p_expr()
 {
-  cout<<"expr"<<endl;
-  //return p_exprStart() & p_rval_eight();
   if(!p_exprStart())
   {
     if(!errorReported)
@@ -2414,29 +2196,20 @@ bool p_expr()
     errorReported = true;
     return false;
   }
-
-  //print out expression
-  // //printExpression();
-
-  //addExpressionToAST()
-
-  //body.push_back();
   return true;
 }
 
-bool p_exprStart()
+
+///exprStart ::= IDENT "=" exprStart | epsilon
+bool p_exprStart() //has a look-ahead of two tokens
 {
-  cout<<"exprStart"<<endl;
-  cout<<CurTok.type<<endl;
+
   TOKEN firstLookAhead = CurTok;
-  cout<<firstLookAhead.type<<endl;
   getNextToken();
-  cout<<CurTok.type<<endl;
   if(firstLookAhead.type == IDENT & CurTok.type == ASSIGN)
   {
       putBackToken(CurTok);
       CurTok = firstLookAhead;
-      //cout<<CurTok.type<<endl;
 
       variableIdent = CurTok;
       if(!match(IDENT))
@@ -2467,11 +2240,9 @@ bool p_exprStart()
   {
     putBackToken(CurTok);
       CurTok = firstLookAhead;
-      cout<<CurTok.type<<endl;
-
     if(contains(CurTok.type,FOLLOW_exprStart))
     {
-      cout<<"eat"<<endl;
+      //consume token
       return true;
     }
     else
@@ -2484,9 +2255,10 @@ bool p_exprStart()
   }
 }
 
+
+/// else_stmt  ::= "else" block | epsilon   
 bool p_else_stmt()
 {
-  cout<<"else_stmt"<<endl;
   if(CurTok.type == ELSE)
   {
     // return match(ELSE) & p_block();
@@ -2519,7 +2291,7 @@ bool p_else_stmt()
   {
     if(contains(CurTok.type,FOLLOW_else_stmt))
     {
-      cout<<"eat"<<endl;
+      //consume token
       pair <string,unique_ptr<ASTnode>> no_else = make_pair("no_else",std::move(nullptr));
       stmtList.push_back(std::move(no_else));
       return true;
@@ -2535,11 +2307,10 @@ bool p_else_stmt()
 }
 
 
+ 
+/// if_stmt ::= "if" "(" expr ")" block else_stmt 
 bool p_if_stmt()
 {
-  cout<<"if_stmt"<<endl;
-  // return match(IF) & match(LPAR) & p_expr() & match(RPAR) & p_block() & p_else_stmt();
-
   if(!match(IF))
   {
     if(!errorReported)
@@ -2574,9 +2345,6 @@ bool p_if_stmt()
   
   pair <string,unique_ptr<ASTnode>> p = make_pair("if",std::move(nullptr));
   stmtList.push_back(std::move(p));
-  //checkForUnary();
-   cout<<"Printing"<<endl;
-    //printExpression();
   unique_ptr<ASTnode> expr = createExprASTnode(expression);
   pair <string,unique_ptr<ASTnode>> e = make_pair("expr",std::move(expr));
   stmtList.push_back(std::move(e));
@@ -2604,6 +2372,8 @@ bool p_if_stmt()
   return true;
 }
 
+
+/// while_stmt ::= "while" "(" expr ")" stmt 
 bool p_while_stmt()
 {
   // return match(WHILE) & match(LPAR) & p_expr() & match(RPAR) & p_stmt();
@@ -2641,9 +2411,6 @@ bool p_while_stmt()
   
   pair <string,unique_ptr<ASTnode>> p = make_pair("while",std::move(nullptr));
   stmtList.push_back(std::move(p));
-  //checkForUnary();
-   cout<<"Printing"<<endl;
-    //printExpression();
   unique_ptr<ASTnode> expr = createExprASTnode(expression);
   pair <string,unique_ptr<ASTnode>> e = make_pair("expr",std::move(expr));
   stmtList.push_back(std::move(e));
@@ -2664,9 +2431,10 @@ bool p_while_stmt()
 
 }
 
+
+/// expr_stmt ::= expr ";" |  ";"
 bool p_expr_stmt()
 {
-  cout<<"expr_stmt"<<endl;
   if(contains(CurTok.type, FIRST_expr))
   {
     if(!p_expr())
@@ -2683,11 +2451,6 @@ bool p_expr_stmt()
       errorReported = true;
       return false;
     }
-    // //printExpression();
-
-    //checkForUnary();
-     cout<<"Printing"<<endl;
-    //printExpression();
     unique_ptr<ASTnode> expr = createExprASTnode(expression);
     pair <string,unique_ptr<ASTnode>> p = make_pair("expr",std::move(expr));
     stmtList.push_back(std::move(p));
@@ -2716,9 +2479,10 @@ bool p_expr_stmt()
   }
 }
 
+
+/// stmt ::= expr_stmt | block | if_stmt | while_stmt | return_stmt
 bool p_stmt()
 {
-  cout<<"stmt"<<endl;
   if(contains(CurTok.type,FIRST_expr_stmt))
   {
     return p_expr_stmt();
@@ -2748,10 +2512,10 @@ bool p_stmt()
   }
 }
 
+
+/// stmt_list ::= stmt stmt_list | epsilon 
 bool p_stmt_list()
 {
-  cout<<"stmt_list"<<endl;
-   cout<<CurTok.type<<endl;
   if(contains(CurTok.type, FIRST_stmt_list))
   {
     if(!p_stmt())
@@ -2768,7 +2532,7 @@ bool p_stmt_list()
   {
     if(contains(CurTok.type, FOLLOW_stmt_list))
     {
-      cout<<"eat"<<endl;
+      //consume token
       return true;
     }
     else
@@ -2781,9 +2545,10 @@ bool p_stmt_list()
   }
 }
 
+
+///local_decl ::= var_type IDENT ";" 
 bool p_local_decl()
 {
-  cout<<"local_decl"<<endl;
   if(!p_var_type())
   {
     if(!errorReported)
@@ -2816,12 +2581,12 @@ bool p_local_decl()
   resetVartype();
 
   return true;
-  //return p_var_type() & match(IDENT) & match(SC);
 }
 
+
+/// local_decls ::= local_decl local_decls | epsilon
 bool p_local_decls()
 {
-   cout<<"local_decls"<<endl;
    if(contains(CurTok.type, FIRST_local_decl))
    {
       if(!p_local_decl())
@@ -2831,24 +2596,13 @@ bool p_local_decls()
       errorReported = true;
         return false;
       }
-
-      //added to body
-
-      // if(!p_local_decls()) //recursive
-      // {
-      //   return false;
-      // }
-      
-
       return p_local_decls();
-
-      //return p_local_decl() & p_local_decls();
    }
    else
    {
     if(contains(CurTok.type, FOLLOW_local_decls))
     {
-      cout<<"eat"<<endl;
+      //consume token
       return true;
     }
     else
@@ -2861,10 +2615,10 @@ bool p_local_decls()
    }
 }
 
+
+/// param ::= var_type IDENT 
 bool p_param()
 {
-  cout<<"param"<<endl;
-  //return p_var_type() & match(IDENT);
   if(!p_var_type())
   {
     if(!errorReported)
@@ -2883,8 +2637,6 @@ bool p_param()
     return false;
   }
 
-  //argument.append(identifier);
-
   argument = std::make_unique<VariableASTnode>(identifier, vartype, identifier.lexeme);
   argumentList.push_back(std::move(argument));
   resetVartype();
@@ -2893,9 +2645,10 @@ bool p_param()
   return true;
 }
 
+
+/// block ::= "{" local_decls stmt_list "}" 
 bool p_block()
 {
-  cout<<"block"<<endl;
 
   if(!match(LBRA))
   {
@@ -2912,8 +2665,6 @@ bool p_block()
       errorReported = true;
     return false;
   }
-
-  //added to body - need to add more from stmt_list
 
    if(!p_stmt_list())
   {
@@ -2933,14 +2684,13 @@ bool p_block()
 
   resetExpression();
 
-
   return true;
-  //return match(LBRA) & p_local_decls() & p_stmt_list() & match(RBRA);
 }
 
+
+/// var_type  ::= "int" |  "float" |  "bool"
 bool p_var_type()
 {
-  cout<<"var_type"<<endl;
   if(CurTok.type == INT_TOK)
   {
     if(!match(INT_TOK))
@@ -2951,7 +2701,6 @@ bool p_var_type()
       return false;
     }
     vartype.append("int");
-    cout<<vartype<<endl;
     return true;
   }
   else if(CurTok.type == FLOAT_TOK)
@@ -2987,9 +2736,10 @@ bool p_var_type()
   }
 }
 
+
+/// type_spec ::= "void" |  var_type
 bool p_type_spec()
 {
-  cout<<"type_spec"<<endl;
   if(CurTok.type == VOID_TOK)
   {
     if(!match(VOID_TOK))
@@ -3015,9 +2765,11 @@ bool p_type_spec()
   }
 }
 
+
+
+/// param_list' ::= "," param_list | epsilon
 bool p_param_list_prime()
 {
-  cout<<"param_list'"<<endl;
   if(CurTok.type == COMMA)
   {
     
@@ -3038,13 +2790,12 @@ bool p_param_list_prime()
     }
     
     return true;
-    //return match(COMMA) & p_param_list();
   }
   else
   {
     if(contains(CurTok.type,FOLLOW_param_list_prime)) //end of all parameters
     {
-      cout<<"eat"<<endl;
+      //consume token
 
       return true;
     }
@@ -3058,15 +2809,18 @@ bool p_param_list_prime()
   }
 }
 
+
+/// param_list ::= param param_list'
 bool p_param_list()
 {
-  cout<<"param_list"<<endl;
   return p_param() & p_param_list_prime();
 }
 
+
+
+/// params ::= param_list | "void" | epsilon
 bool p_params()
 {
-  cout<<"params"<<endl;
   if(contains(CurTok.type,FIRST_param_list))
   {
     return p_param_list();
@@ -3075,14 +2829,12 @@ bool p_params()
   {
     argument = std::make_unique<VariableASTnode>(CurTok, "void", "");
     argumentList.push_back(std::move(argument));
-    //cout<<"size:"<<argumentList.size()<<endl;
     return match(VOID_TOK);
   }
   else //epsilon
   {
     if(contains(CurTok.type,FOLLOW_params))
       {
-        cout<<"eat"<<endl;
         return true; //consume epsilon
       }
       else
@@ -3090,21 +2842,20 @@ bool p_params()
         if(!errorReported)
           errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
         errorReported = true;
-        return false; //fail
+        return false; 
       }
   }
 }
 
+/// decl' ::= ";" | "(" params ")" block   
 bool p_decl_prime()
 {
-  cout<<"decl'"<<endl;
   if(CurTok.type == SC) 
   {
-    variableIdent = functionIdent; //not a function
+    variableIdent = functionIdent; //it is not a function
     vartype = functiontype;
     resetFunctionIdent();
     resetFunctiontype();
-
 
     if(!match(SC))
     {
@@ -3161,28 +2912,25 @@ bool p_decl_prime()
       errorReported = true;
       return false;
     }
-    cout<<"//////////////////////////////////////"<<endl;
-    printStmtList();
-        cout<<"//////////////////////////////////////"<<endl;
 
     addToBody();
     resetStmtList();
     addFunctionAST(); 
     return true;
-    //return match(LPAR) & p_params() & match(RPAR) & p_block();
   }
   else
   {
     if(!errorReported)
           errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
     errorReported = true;
-    return false; //fail
+    return false; 
   }
 }
 
+
+/// extern_list' ::= extern_list | epsilon
 bool p_extern_list_prime()
 {
-  cout<<"extern_list'"<<endl;
   if(contains(CurTok.type,FIRST_extern_list))
    {
       return p_extern_list();
@@ -3191,7 +2939,6 @@ bool p_extern_list_prime()
    {
       if(contains(CurTok.type,FOLLOW_extern_list_prime))
       {
-        cout<<"eat"<<endl;
         return true; //consume epsilon
       }
       else
@@ -3199,15 +2946,15 @@ bool p_extern_list_prime()
         if(!errorReported)
           errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
         errorReported = true;
-        return false; //fail
+        return false; 
       }
    }
 }
 
+
+/// extern ::= "extern" type_spec IDENT "(" params ")" ";"   
 bool p_extern()
 {
-  cout<<"extern"<<endl;
-  //return match(EXTERN) & p_type_spec() & match(IDENT) & match(LPAR) & p_params() & match(RPAR) & match(SC);
   if(!match(EXTERN))
   {
       if(!errorReported)
@@ -3274,9 +3021,7 @@ bool p_extern()
       errorReported = true;
       return false;
   }
-  cout<<"size:"<<argumentList.size()<<endl;
   unique_ptr<PrototypeAST> Proto = std::make_unique<PrototypeAST>(prototypeName,std::move(argumentList));
-  // root.push_back(std::make_unique<FunctionAST>(std::move(Proto),std::move(body)));
   root.push_back(std::move(Proto));
   resetArgumentList();
   resetPrototypeName();
@@ -3285,10 +3030,11 @@ bool p_extern()
 
 }
 
+
+
+/// decl_list' ::= decl_list | epsilon
 bool p_decl_list_prime()
 {
-  cout<<"decl_list'"<<endl;
-  cout<<CurTok.type<<endl;
    if(contains(CurTok.type,FIRST_decl_list))
    {
       return p_decl_list();
@@ -3297,7 +3043,6 @@ bool p_decl_list_prime()
    {
       if(contains(CurTok.type,FOLLOW_decl_list_prime))
       {
-        cout<<"eat"<<endl;
         return true; //consume epsilon
       }
       else
@@ -3310,12 +3055,13 @@ bool p_decl_list_prime()
    }
 }
 
+
+
+/// decl ::= var_type IDENT decl' | "void" IDENT "(" params ")" block    
 bool p_decl()
 {
-  cout<<"decl"<<endl;
   if(contains(CurTok.type,FIRST_var_type))
   {
-    //return p_var_type() & match(IDENT) & p_decl_prime();
     if(!p_var_type())
     {
       if(!errorReported)
@@ -3336,10 +3082,6 @@ bool p_decl()
       return false;
     }
 
-    //prototypeName.append(functionIdent.lexeme);
-
-    //functionIdent defined
-
     if(!p_decl_prime())
     {
       return false;
@@ -3349,7 +3091,6 @@ bool p_decl()
   }
   else if(CurTok.type == VOID_TOK)
   {
-    //return match(VOID_TOK) & match(IDENT) & match(LPAR) & p_params() & match(RPAR) & p_block();
     if(!match(VOID_TOK))
     {
       if(!errorReported)
@@ -3404,7 +3145,6 @@ bool p_decl()
       errorReported = true;
       return false;
     }
-    // printStmtList();
     addToBody();
     resetStmtList();
     addFunctionAST(); 
@@ -3415,33 +3155,28 @@ bool p_decl()
     if(!errorReported)
       errs()<<"Syntax error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<".\n";
     errorReported = true;
-    return false; //fail
+    return false; 
   }
 }
 
+
+/// decl_list ::= decl decl_list'
 bool p_decl_list()
 {
-  cout<<"decl_list"<<endl;
   return p_decl() & p_decl_list_prime();
 }
 
+
+/// extern_list ::= extern extern_list' 
 bool p_extern_list()
 {
-  cout<<"extern_list"<<endl;
   return p_extern() & p_extern_list_prime();
 }
 
+
+// program ::= extern_list decl_list
 bool p_program()
 {
-  /*
-  if curTok is in FIRST(extern_list)
-    run extern_list()
-  else if curTok is in FIRST(decl_list)
-    run decl_list()
-  else
-    error
-  */
-  cout<<"program"<<endl;
   if(contains(CurTok.type, FIRST_extern_list) == true)
   {
      return p_extern_list() & p_decl_list();
@@ -3456,14 +3191,13 @@ bool p_program()
   }
 }
 
-// program ::= extern_list decl_list
+//function to initialise parsing and get outcome, before moving on to code generation
 static bool parser() {
-  // add body
   getNextToken();
   if(p_program() & (CurTok.type == EOF_TOK))
   {
     cout<<"Parsing successful."<<endl;
-    return true;
+    return true; //continue to print AST and generate IR
   }
   else
   {
@@ -3473,16 +3207,15 @@ static bool parser() {
 }
 
 //===----------------------------------------------------------------------===//
-// Code Generation
+// Code Generation - Defining codegen() functions for each AST node
 //===----------------------------------------------------------------------===//
 
 static LLVMContext TheContext;
 static IRBuilder<> Builder(TheContext);
 static std::unique_ptr<Module> TheModule;
 
-static vector<map<string,AllocaInst*>> NamedValuesList;
-// static std::map<std::string, AllocaInst*> NamedValues;
-static map<string,GlobalVariable*> GlobalVariables;
+static vector<map<string,AllocaInst*>> NamedValuesList; //vector of symbol tables
+static map<string,GlobalVariable*> GlobalVariables; //symbol table for global variables
 
 static AllocaInst* CreateEntryBlockAlloca(Function *TheFunction, const std::string &VarName, string type) {
   IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
@@ -3498,29 +3231,23 @@ static AllocaInst* CreateEntryBlockAlloca(Function *TheFunction, const std::stri
 }
 
 Value *IntASTnode::codegen() {
-  cout<<"Int codegen\n";
-  return ConstantInt::get(TheContext, APInt(32,Val,true));
+  return ConstantInt::get(TheContext, APInt(32,Val,true)); //int32 type
 }
 
 Value *FloatASTnode::codegen() {
-  cout<<"Float codegen\n";
-  return ConstantFP::get(TheContext, APFloat(float(Val)));
+  return ConstantFP::get(TheContext, APFloat(float(Val))); //float type
 }
 
 Value *BoolASTnode::codegen() {
-  cout<<"Bool codegen\n";
-  return ConstantInt::get(TheContext, APInt(1,int(Val),false));
+  return ConstantInt::get(TheContext, APInt(1,int(Val),false)); //int1 type
 }
 
 Value *VariableASTnode::codegen() {
-  cout<<"VarDecl codegen\n";
-// AllocaInst *VariableASTnode::codegen() {
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
   AllocaInst* varAlloca = CreateEntryBlockAlloca(TheFunction, Val, Type);
   //store in NamedValues
-  std::map<std::string, AllocaInst*> NamedValues = NamedValuesList.back();
+  std::map<std::string, AllocaInst*> NamedValues = NamedValuesList.back(); //obtain most recent symbol table (of current scope)
   NamedValuesList.pop_back();
-
   
   if(NamedValues.insert({Val,varAlloca}).second == false) //check if symbol table already contains same variable name
   {
@@ -3535,17 +3262,15 @@ Value *VariableASTnode::codegen() {
     errs()<<"Semantic error: Redefinition of variable "<<Val<<" with different type "<<Type<<" at column no. "<<Tok.columnNo<<", line no. "<<Tok.lineNo<<". Variable "<<Val<<" of type "<<existTy<<" already exists within current scope.\n";
     return nullptr;
   }
-  //Value* var = Builder.CreateLoad(Type::getInt32Ty(TheContext), varAlloca, Val);
-  NamedValuesList.push_back(NamedValues);
+  NamedValuesList.push_back(NamedValues); //push symbol table back to the vector again after adding new variable
   return varAlloca;
 }
 
 Value *VariableReferenceASTnode::codegen() {
   // Look this variable up in the function.
-  cout<<"VarRef codegen\n";
   AllocaInst *V;
 
-  //iterate thru all symbol tables, starting from end
+  //check through all symbol tables, starting from recent table
   std::map<std::string, AllocaInst*> NamedValues;
   int i;
   for(i = NamedValuesList.size() - 1; i >= 0; i--)
@@ -3554,17 +3279,14 @@ Value *VariableReferenceASTnode::codegen() {
     V = NamedValues[Name];
     if(!V)
     {
-      cout<<"Can't find "<<Name<<". Proceed with next symbol table"<<endl;
-      continue;
+      continue; //it is not a local variable - no alloca found
     }
     else
     {
-      cout<<"FOUND "<<Name<<endl;
-      return V;
+      return V; //return alloca so it can be loaded
     }
 
   }
-  cout<<"End of all symbol tables. Checking global variables of size "<<GlobalVariables.size()<<endl;
   
   //check if its a global variable instead
   GlobalVariable *GV = GlobalVariables[Name];
@@ -3575,20 +3297,18 @@ Value *VariableReferenceASTnode::codegen() {
   }
   else 
   {
-    cout<<"FOUND GLOBAL "<<Name<<endl;
-    return GV;
+    return GV; //return global variable
   }
 }
 
 Value* UnaryExprASTnode::codegen()
 { 
-  cout<<"Unary codegen\n";
   Value* operand = Operand->codegen();
 
   if(operand == nullptr)
     return nullptr;
-
   
+  //load the operand depending on whether it is a local or global variable
   if(auto *AI = dyn_cast<AllocaInst>(operand))
   {
     operand = Builder.CreateLoad(AI->getAllocatedType(),operand,"load_temp");
@@ -3598,6 +3318,7 @@ Value* UnaryExprASTnode::codegen()
     operand = Builder.CreateLoad(GV->getValueType(),operand,"load_global_temp");
   }
 
+  //get the type of the operand
   string type = "";
 
   if(operand->getType()->isIntegerTy(32))
@@ -3613,20 +3334,9 @@ Value* UnaryExprASTnode::codegen()
     type = "float";
   }
 
-  if(Opcode == "!") //talk about how this is done with extraneous instructions but still gives correct answer 
+  //unary operations only possible on operands of `bool` type
+  if(Opcode == "!") 
   {
-    // if(type == "float")
-    // {
-    //   // operand = Builder.CreateCast(Instruction::FPToSI,operand,Type::getInt32Ty(TheContext));
-    //   // type = "int";
-    //   operand = Builder.CreateFCmpONE(operand, ConstantFP::get(TheContext, APFloat((float) 0.0)),"bool_cast");
-    // }
-
-    // if(type == "int")
-    // {
-    //   operand = Builder.CreateIntCast(operand, Type::getInt1Ty(TheContext), false);
-    // }
-
     if(type == "bool")
       return Builder.CreateNot(operand,"not_temp");
     else
@@ -3640,25 +3350,19 @@ Value* UnaryExprASTnode::codegen()
     {
       operand = Builder.CreateIntCast(operand, Type::getInt32Ty(TheContext), false);
     }
-    else if(type == "float") //do a subtraction with 0
+    else if(type == "float") 
     {
-      float zero = 0.0;
       return Builder.CreateFNeg(operand,"fneg_temp");
     }
     return Builder.CreateNeg(operand,"neg_temp");
-    // return Builder.CreateSub(ConstantInt::get(TheContext,APInt(32,0,true)),operand,"neg_temp");//fneg not used (only flips sign bit)
-
   }
   else
     return nullptr;
-  // return nullptr;
 }
 
 Value* BinaryExprASTnode::codegen(){
-  cout<<"Binary codegen\n";
-  cout<<"OP: "<<Opcode<<endl;
   Value* lhs = LHS->codegen();
-  //boolean short circuit code generation for logical operators || and && - only works for constants
+  //boolean short circuit code generation for logical operators || and && - only works for constants (see `limitations` section in report)
   if(Opcode == "&&")
   {
     if(lhs == ConstantInt::get(TheContext, APInt(1,int(false),false))) //return false if lhs is false
@@ -3676,7 +3380,7 @@ Value* BinaryExprASTnode::codegen(){
   if(lhs == nullptr | rhs == nullptr)
     return nullptr;
 
-
+  //storing types of lhs and rhs
   int lhsType = 0;
   int rhsType = 0;
   string lhsTypeStr = "";
@@ -3686,7 +3390,6 @@ Value* BinaryExprASTnode::codegen(){
   {
     if(auto *AI = dyn_cast<AllocaInst>(lhs)) //for ordinary variable alloca
     {
-      cout<<"lhs alloca\n";
       if(AI->getAllocatedType()->isFloatTy())
         lhs = Builder.CreateLoad(Type::getFloatTy(TheContext), AI, "load_temp");
       else if(AI->getAllocatedType()->isIntegerTy(32))
@@ -3697,7 +3400,6 @@ Value* BinaryExprASTnode::codegen(){
     }  
     else if(auto *GV = dyn_cast<GlobalVariable>(lhs)) //for global variables
     {
-      cout<<"lhs Global\n";
       if(GV->getValueType()->isFloatTy())
         lhs = Builder.CreateLoad(Type::getFloatTy(TheContext), GV, "load_global_temp");
       else if(GV->getValueType()->isIntegerTy(32))
@@ -3712,11 +3414,10 @@ Value* BinaryExprASTnode::codegen(){
       else if(lhs->getType()->isIntegerTy(1))
         lhsType = 0;
   }
-  else //keep LHS as an alloca and get its type
+  else //keep LHS as an alloca/global and get its type
   {
     if(auto *AI = dyn_cast<AllocaInst>(lhs))
     {
-      cout<<"lhs Alloca\n";
       if(AI->getAllocatedType()->isFloatTy())
         lhsType = 2;
       else if(AI->getAllocatedType()->isIntegerTy(32))
@@ -3726,7 +3427,6 @@ Value* BinaryExprASTnode::codegen(){
     }
     else if(auto *GV = dyn_cast<GlobalVariable>(lhs))
     {
-      cout<<"lhs Global\n";
       if(GV->getValueType()->isFloatTy())
         lhsType = 2;
       else if(GV->getValueType()->isIntegerTy(32))
@@ -3738,7 +3438,6 @@ Value* BinaryExprASTnode::codegen(){
 
   if(auto *AI = dyn_cast<AllocaInst>(rhs)) //load RHS
   {
-    cout<<"rhs Alloca\n";
     if(AI->getAllocatedType()->isFloatTy())
       rhs = Builder.CreateLoad(Type::getFloatTy(TheContext), AI, "load_temp");
     else if(AI->getAllocatedType()->isIntegerTy(32))
@@ -3748,7 +3447,6 @@ Value* BinaryExprASTnode::codegen(){
   }
   else if(auto *GV = dyn_cast<GlobalVariable>(rhs)) //if RHS is a global variable
   {
-    cout<<"rhs Global\n";
     if(GV->getValueType()->isFloatTy())
       rhs = Builder.CreateLoad(Type::getFloatTy(TheContext), GV, "load_global_temp");
     else if(GV->getValueType()->isIntegerTy(32))
@@ -3756,6 +3454,8 @@ Value* BinaryExprASTnode::codegen(){
     else if(GV->getValueType()->isIntegerTy(1))
       rhs = Builder.CreateLoad(Type::getInt1Ty(TheContext), GV, "load_global_temp");
   }
+
+  //get type of loaded RHS
   if(rhs->getType()->isIntegerTy(32))
       rhsType = 1;
     else if(rhs->getType()->isIntegerTy(1))
@@ -3763,6 +3463,7 @@ Value* BinaryExprASTnode::codegen(){
     else if(rhs->getType()->isFloatTy())
       rhsType = 2;
 
+  ///get types as a "string" - for printing errors
   switch(lhsType)
   {
     case 0: lhsTypeStr = "bool"; break;
@@ -3778,19 +3479,11 @@ Value* BinaryExprASTnode::codegen(){
     case 2: rhsTypeStr = "float"; break;
     default: break;
   }
-
-  cout<<"lhsType: "<<lhsTypeStr<<endl;
-  cout<<"rhsType: "<<rhsTypeStr<<endl;
   
-    //Modify for different types
     if(Opcode == "=") //ASSIGN
     {
-      cout<<"lhsType for EQ: "<<lhsTypeStr<<endl;
-      cout<<"rhsType for EQ: "<<rhsTypeStr<<endl;
-
-      if(auto *st = dyn_cast<StoreInst>(rhs))
+      if(auto *st = dyn_cast<StoreInst>(rhs)) //get type again if a operand is a StoreInst e.g. a = b = 10;
       {
-        cout<<"yes\n";
         rhs = st->getValueOperand();
 
         if(rhs->getType()->isIntegerTy(32))
@@ -3809,20 +3502,10 @@ Value* BinaryExprASTnode::codegen(){
         }
       }
 
-      string name = LHS->getName();
+      string name = LHS->getName(); //we know lhs is an alloca/global
       if(name != "")
       {
-        // not needed
-        // // cout<<"name:"<<name<<endl;
-        // std::map<std::string, AllocaInst*> NamedValues = NamedValuesList.back();
-        // AllocaInst *V = NamedValues[name];
-        // if(!V)
-        // {
-        //   errs()<<"Semantic error: Unknown variable name: "<<name<<"\n";
-        //   return nullptr;
-        // }
-        // // else
-
+        //perform widening conversion before storing to lhs
         if(lhsType < rhsType)
         {
           errs()<<"Semantic error: Widening conversion not possible from RHS type "<<rhsTypeStr<<" to LHS type "<<lhsTypeStr<<" at line no. "<<Tok.lineNo<<" column no. "<<Tok.columnNo<<".\n";
@@ -3830,9 +3513,6 @@ Value* BinaryExprASTnode::codegen(){
         }
         else if(lhsType > rhsType)//perform widening conversions
         {
-            // rhs = Builder.CreateSExt(rhs,lhs->getType(),"zext_temp");
-            cout<<"casting eq\n";
-
             if(lhsType == 2) //to float
             {
               if(rhsType == 0) //bool to float
@@ -3860,42 +3540,8 @@ Value* BinaryExprASTnode::codegen(){
       isLogical = true;
     }
 
-    // if(isLogical == true)
-    // {
-    //   cout<<"Casting for logical operators\n";
-    //           // cout<<lhsType<<endl;
-
-    //   //set both operands to boolean type, for AND, OR operators.
-
-    //         if(lhsType == 2)
-    //         {
-    //           // lhs = Builder.CreateIntCast(lhs, Type::getInt32Ty(TheContext), false);
-    //           // lhs = Builder.CreateCast(Instruction::FPToSI,lhs,Type::getInt32Ty(TheContext));
-    //           // lhsType = 1;
-    //           lhs = Builder.CreateFCmpONE(lhs, ConstantFP::get(TheContext, APFloat((float) 0.0)),"float_bool_cast");
-
-    //         }
-
-    //         if(rhsType == 2)
-    //         {
-    //           // rhs = Builder.CreateIntCast(rhs, Type::getInt32Ty(TheContext), false);
-    //           // rhs = Builder.CreateCast(Instruction::FPToSI,rhs,Type::getInt32Ty(TheContext));
-    //           // rhsType = 1;
-    //           rhs = Builder.CreateFCmpONE(rhs, ConstantFP::get(TheContext, APFloat((float) 0.0)),"float_bool_cast");
-    //         }
-            
-    //         if(lhsType == 1)
-    //           lhs = Builder.CreateICmpNE(lhs, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"int_bool_cast");
-    //         if(rhsType == 1)
-    //           rhs = Builder.CreateICmpNE(rhs, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"int_bool_cast");
-
-    //         lhsType = 0;
-    //         rhsType = 0;
-    // }
-   if(isLogical == true)
+   if(isLogical == true) //makes sure that the operands of logical operands are both `bool` types
     {
-      cout<<"Casting for logical operators\n";
-
       if(lhsType == 2 | rhsType == 2)
       {
         errs()<<"Semantic error: Cannot cast from `float` to `bool` at line no. "<<Tok.lineNo<<" column no. "<<Tok.columnNo<<".\n";
@@ -3917,14 +3563,12 @@ Value* BinaryExprASTnode::codegen(){
 
       //Set both operands to equal types for +, -, *, /, %, ==, !=, <=, <, >= and > operators
 
+      //for arithmetic operations, make sure to perform usual arithmetic conversions (get both operands to the same time) via widening only
       if(lhsType != rhsType)
       {
-        cout<<"uneequal\n";
         int returnType = lhsType;
         if(rhsType > returnType)
           returnType = rhsType;
-
-        cout<<"Casting all to "<<returnType<<endl;
         
         if(returnType == rhsType)
         {
@@ -3966,10 +3610,6 @@ Value* BinaryExprASTnode::codegen(){
             }
           }
       }
-      // else
-      // {
-      //   cout<<"No casting required\n";
-      // }
 
       if(Opcode == "+") //PLUS
       {
@@ -4005,14 +3645,13 @@ Value* BinaryExprASTnode::codegen(){
         else //for int or bool
           return Builder.CreateSDiv(lhs,rhs,"div_tmp");
       }
-      else if(Opcode == "%") //MOD - check if both operands are not float!
+      else if(Opcode == "%") //MOD - make sure second operand is not equal to 0, regardless of type
       {
         if(rhs == ConstantInt::get(TheContext, APInt(32,int(0),false)) | rhs == ConstantInt::get(TheContext, APInt(1,int(false),false)) | rhs == ConstantFP::get(TheContext, APFloat((float)0.0)))
         {
           errs()<<"Semantic error: Taking remainder of division with zero not permitted at line no. "<<Tok.lineNo<<" column no. "<<Tok.columnNo<<".\n";
           return nullptr;
         }
-
         if(rhs->getType()->isFloatTy() & lhs->getType()->isFloatTy()) //float
           return Builder.CreateFRem(lhs,rhs,"fmod_tmp");
         else //for int or bool
@@ -4079,15 +3718,12 @@ Value* BinaryExprASTnode::codegen(){
       }
       else
         return nullptr;
-  
-  //return nullptr;
 }
 
 Value* FuncCallASTnode::codegen(){
   // Look up the name in the global module table.
-  cout<<"FuncCall codegen\n";
   Function *CalleeF = TheModule->getFunction(Callee);
-  if (!CalleeF)
+  if (!CalleeF) //Function not found
   {
     errs()<<"Semantic error: Unknown function "<<Callee<<" referenced at line no. "<<Tok.lineNo<<" column no. "<<Tok.columnNo<<".\n";
     return nullptr;
@@ -4099,15 +3735,14 @@ Value* FuncCallASTnode::codegen(){
     return nullptr;
   }
   
-  std::vector<Value *> ArgsV;
+  std::vector<Value *> ArgsV; //vector of arguments for function call
   for (unsigned i = 0, e = Args.size(); i != e; ++i) 
   {
-    Value* args = Args[i]->codegen(); //get alloca
+    Value* args = Args[i]->codegen(); //get alloca/global
     string currType = "";
     //load arguments
     if(auto *AI = dyn_cast<AllocaInst>(args)) //for ordinary variable alloca
     {
-      cout<<"alloca arg\n";
       if(AI->getAllocatedType()->isFloatTy())
       {
         args = Builder.CreateLoad(Type::getFloatTy(TheContext), AI, "load_arg");
@@ -4127,7 +3762,6 @@ Value* FuncCallASTnode::codegen(){
     }  
     else if(auto *GV = dyn_cast<GlobalVariable>(args)) //for global variables
     {
-      cout<<"global arg\n";
       if(GV->getValueType()->isFloatTy())
       {
         args = Builder.CreateLoad(Type::getFloatTy(TheContext), GV, "load_global_arg");
@@ -4160,6 +3794,8 @@ Value* FuncCallASTnode::codegen(){
       }
     }
 
+    //making sure types of each argument is correct
+    //if not, see if it can be widened
     Type* actualType = CalleeF->getArg(0)->getType();
     string actualTypeStr = "";
 
@@ -4169,8 +3805,6 @@ Value* FuncCallASTnode::codegen(){
       actualTypeStr = "bool";
     else if(actualType->isFloatTy())
       actualTypeStr = "float";
-
-    cout<<"Param type "<<currType<<" should be "<<actualTypeStr<<endl;
 
     if(currType != actualTypeStr)
     {
@@ -4214,16 +3848,15 @@ Value* FuncCallASTnode::codegen(){
     return Builder.CreateCall(CalleeF, ArgsV); //void functions cannot have a name
   else
     return Builder.CreateCall(CalleeF, ArgsV, "call_tmp"); 
-    // return nullptr;
 }
 
 Value* IfExprASTnode::codegen(){
-  cout<<"IfExpr codegen\n";
-  cout<<"ELSE SIZE: "<<Else.size()<<endl;
+
   bool elseExist = false;
-   if(Else.size() != 0)
+   if(Else.size() != 0) //no need to create else branch if there is no else block
     elseExist = true;
   
+  //create necessary basic block to add expressions to
   Function* TheFunction = Builder.GetInsertBlock()->getParent();
   BasicBlock* true_ = BasicBlock::Create(TheContext, "if_then", TheFunction);
   BasicBlock* false_;
@@ -4235,11 +3868,11 @@ Value* IfExprASTnode::codegen(){
   Value* cond = Cond->codegen(); //generate condition expression
   if(cond == nullptr)
       return nullptr;
+
   //check type of cond - making sure it is a bool
   string currType = "";
   if(auto *AI = dyn_cast<AllocaInst>(cond)) //load RHS
   {
-    cout<<"Alloca cond\n";
     if(AI->getAllocatedType()->isFloatTy())
     {
       cond = Builder.CreateLoad(Type::getFloatTy(TheContext), AI, "load_temp");
@@ -4258,7 +3891,6 @@ Value* IfExprASTnode::codegen(){
   }
   else if(auto *GV = dyn_cast<GlobalVariable>(cond)) //if RHS is a global variable
   {
-    cout<<"Global cond\n";
     if(GV->getValueType()->isFloatTy())
     {
       cond = Builder.CreateLoad(Type::getFloatTy(TheContext), GV, "load_temp");
@@ -4284,20 +3916,17 @@ Value* IfExprASTnode::codegen(){
     else if(cond->getType()->isIntegerTy(1))
       currType = "bool";
   }
-  cout<<"COND TYPE: "<<currType<<endl;
 
+  //make sure the condition statement is of `bool` type
   if(currType != "bool")
   {
     errs()<<"Semantic error: Expected type `bool` for the condition statement at line no. "<<Cond->getTok().lineNo<<" column no. "<<Cond->getTok().columnNo<<". Cannot cast from type `"<<currType<<"` to `bool`.\n";
     return nullptr;
-    // if(currType == "float")
-    //   cond = Builder.CreateFCmpONE(cond, ConstantFP::get(TheContext, APFloat((float) 0.0)),"float_bool_cast");   
-    // else if(currType == "int")
-    //   cond = Builder.CreateICmpNE(cond, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"int_bool_cast");
   }
 
   Value* comp = Builder.CreateICmpNE(cond, ConstantInt::get(TheContext, APInt(1,0,false)), "if_cond");
 
+  //create conditional branch instruction
   if(elseExist)
     Builder.CreateCondBr(comp, true_, false_);
   else
@@ -4315,7 +3944,6 @@ Value* IfExprASTnode::codegen(){
   for(int i = 0; i < Then.size(); i++)
   {
     //new block - create a new symbol table
-    cout<<"size of then:"<<Then.size()<<endl;
     Value* thenVal = Then.at(i)->codegen();
     if(thenVal == nullptr)
       return nullptr;
@@ -4325,14 +3953,12 @@ Value* IfExprASTnode::codegen(){
         generateBranchForThen = false;
         break; //don't generate IR for instructions after return
       }
-    // if(thenVal == nullptr)
-    //   cout<<"ERROR!!!!"<<endl;
   }
   //remove symbol table of Then block
   NamedValuesList.pop_back();
 
   if(generateBranchForThen)
-    Builder.CreateBr(end_);
+    Builder.CreateBr(end_);  //create unconditional branch instruction to end, given that `if_then` block had no return statements
 
   if(elseExist)
   {
@@ -4355,12 +3981,13 @@ Value* IfExprASTnode::codegen(){
     }
 
     if(generateBranchForElse)
-      Builder.CreateBr(end_);
+      Builder.CreateBr(end_); //create unconditional branch to end if else block has no return statements
+
     //remove symbol table of Else block
     NamedValuesList.pop_back();
   }
 
-  if(generateBranchForThen | generateBranchForElse) //only generate if_end if if_then and if_else don't have a return stmt
+  if(generateBranchForThen | generateBranchForElse) //only generate 'if_end' block if 'if_then' and 'if_else' don't have a return stmt
   {
     TheFunction->insert(TheFunction->end(), end_);
     Builder.SetInsertPoint(end_);
@@ -4371,7 +3998,6 @@ Value* IfExprASTnode::codegen(){
 }
 
 Value* WhileExprASTnode::codegen(){
-  cout<<"While codegen\n";
   Function* TheFunction = Builder.GetInsertBlock()->getParent();
   BasicBlock* cond_ = BasicBlock::Create(TheContext, "while_cond", TheFunction);
   BasicBlock* true_ = BasicBlock::Create(TheContext, "while_body", TheFunction);
@@ -4386,7 +4012,6 @@ Value* WhileExprASTnode::codegen(){
   string currType = "";
   if(auto *AI = dyn_cast<AllocaInst>(cond)) //load RHS
   {
-    cout<<"Alloca cond\n";
     if(AI->getAllocatedType()->isFloatTy())
     {
       cond = Builder.CreateLoad(Type::getFloatTy(TheContext), AI, "load_temp");
@@ -4405,7 +4030,6 @@ Value* WhileExprASTnode::codegen(){
   }
   else if(auto *GV = dyn_cast<GlobalVariable>(cond)) //if RHS is a global variable
   {
-    cout<<"Global cond\n";
     if(GV->getValueType()->isFloatTy())
     {
       cond = Builder.CreateLoad(Type::getFloatTy(TheContext), GV, "load_temp");
@@ -4431,18 +4055,12 @@ Value* WhileExprASTnode::codegen(){
     else if(cond->getType()->isIntegerTy(1))
       currType = "bool";
   }
-  cout<<"COND TYPE: "<<currType<<endl;
 
   if(currType != "bool") //cast to bool type
   {
     errs()<<"Semantic error: Expected type `bool` for the condition statement at line no. "<<Cond->getTok().lineNo<<" column no. "<<Cond->getTok().columnNo<<". Cannot cast from type `"<<currType<<"` to `bool`.\n";
     return nullptr;
-    // if(currType == "float")
-    //   cond = Builder.CreateFCmpONE(cond, ConstantFP::get(TheContext, APFloat((float) 0.0)),"float_bool_cast");   
-    // else if(currType == "int")
-    //   cond = Builder.CreateICmpNE(cond, ConstantInt::get(Type::getInt32Ty(TheContext), 0, false),"int_bool_cast");
   }
-
 
   Value* comp = Builder.CreateICmpNE(cond, ConstantInt::get(TheContext, APInt(1,0, false)), "if_cond");
   Builder.CreateCondBr(comp, true_, false_);
@@ -4456,7 +4074,6 @@ Value* WhileExprASTnode::codegen(){
   for(int i = 0; i < Then.size(); i++)
   {
     //new block - create a new symbol table
-    cout<<"size of then:"<<Then.size()<<endl;
     Value* thenVal = Then.at(i)->codegen();
     if(thenVal == nullptr)
       return nullptr;
@@ -4468,10 +4085,9 @@ Value* WhileExprASTnode::codegen(){
   }
   //remove symbol table of Then block
   if(generateBranchForBody)
-    Builder.CreateBr(cond_);
+    Builder.CreateBr(cond_); //if body doesn't contain return statement, make unconditional jump to cond branch
   NamedValuesList.pop_back();
 
-  
   TheFunction->insert(TheFunction->end(), false_);
   Builder.SetInsertPoint(false_);
   return ConstantPointerNull::get(PointerType::getUnqual(Type::getVoidTy(TheContext))); //return null pointer of void type
@@ -4479,19 +4095,16 @@ Value* WhileExprASTnode::codegen(){
 }
 
 Value* ReturnExprASTnode::codegen(){
-  // return nullptr;
-  cout<<"Return codegen\n";
   if(ReturnExpr == nullptr)
   {
     return Builder.CreateRetVoid();
   }
   Value* returnExpr = ReturnExpr->codegen();
 
-  // cout<<"FUNC RETURN: "<<FuncReturnType<<endl;
-
   if(returnExpr == nullptr)
     return nullptr;
 
+  //create load
   if(auto *AI = dyn_cast<AllocaInst>(returnExpr))
   {
     returnExpr = Builder.CreateLoad(AI->getAllocatedType(),returnExpr,"load_temp");
@@ -4510,6 +4123,7 @@ Value* ReturnExprASTnode::codegen(){
   else if(returnExpr->getType()->isFloatTy())
     actualType = "float";
   
+  //if type of return statement not correct, try to do widening conversion, otherwise error
   if(correctType != actualType)
   {
     if(actualType == "float")
@@ -4550,24 +4164,21 @@ Value* ReturnExprASTnode::codegen(){
 }
 
 Function* PrototypeAST::codegen(){
-    cout<<"Prototype codegen\n";
   // Make the function type:
-
-  //bool isExtern = false;
   string ReturnType = "";
   string origName = getName();
   size_t space_pos = origName.find(" ");    
+
+  //string manipulation to get 'type' and 'name'
   if (space_pos != std::string::npos) 
   {
     ReturnType = origName.substr(0, space_pos);
   }
 
   origName = origName.substr(space_pos + 1);
-  // cout<<"F: "<<Name<<endl;
 
-  if(ReturnType == "extern") //for extern functions
+  if(ReturnType == "extern") //for extern functions, get 'extern' out from the name
   {
-    //isExtern = true;
     size_t space_pos_2 = origName.find(" ");    
     if (space_pos_2 != std::string::npos) 
     {
@@ -4575,8 +4186,6 @@ Function* PrototypeAST::codegen(){
       origName = origName.substr(space_pos_2 + 1);
     }
   }
-
-  cout<<"E: "<<Name<<"|"<<endl;
 
   string ArgType = "";
   vector<Type *> ArgTypes;
@@ -4590,12 +4199,7 @@ Function* PrototypeAST::codegen(){
         ArgTypes.push_back(Type::getFloatTy(TheContext));
       else if(ArgType == "bool")
         ArgTypes.push_back(Type::getInt1Ty(TheContext));  //bool is Int1 type
-      //ignore "void" - not allowed to be in argument list for LLVM IR
-      // else if(ArgType == "void")
-      // {
-      //   cout<<"yes"<<endl;
-      //   ArgTypes.push_back(Type::getVoidTy(TheContext));
-      // }
+      //ignoring void arguments - not allowed to be part of list
   }
 
   FunctionType *FT;
@@ -4617,11 +4221,6 @@ Function* PrototypeAST::codegen(){
     FT = FunctionType::get(Type::getVoidTy(TheContext), ArgTypes, false);
   }
 
-//Probably better to change FunctionAST node to have a type variable
-//Or get first word from name to identify type
-//  if(Name == "int main")
-//   Name = "main";
-
  Function *F = Function::Create(FT, Function::ExternalLinkage, origName, TheModule.get());
  //Set names for all arguments.
  unsigned Idx = 0;
@@ -4632,17 +4231,15 @@ Function* PrototypeAST::codegen(){
  }
 
  return F;
-  // return nullptr;
 }
 
 Value* GlobalVariableAST::codegen(){
-  cout<<"Global variable codgen\n";
-  // return nullptr;
-  bool isConstant = false; //idk if this matters for global variables - ask tutors if it causes problems - false sets to global, true sets it to constant
+  bool isConstant = false; 
   string ty = getType();
-  int alignSize = 4;
+  int alignSize = 4; //set correct alignment
   Type* t = nullptr;
 
+  //get type of global variable
   if(ty == "int")
     t = Type::getInt32Ty(TheContext);
   else if(ty == "float")
@@ -4655,12 +4252,12 @@ Value* GlobalVariableAST::codegen(){
   else
     return nullptr;
 
-  cout<<"global proceed"<<endl;
-
+  //create new global variable and set name
   GlobalVariable* g = new GlobalVariable(*(TheModule.get()),t,isConstant,GlobalValue::CommonLinkage,Constant::getNullValue(t));
   g->setAlignment(MaybeAlign(alignSize));
   g->setName(Val);
 
+  //add global variable to global symbol table, if it is new
   if(GlobalVariables.insert({Val,g}).second == false)
   {
     string existTy = "";
@@ -4678,7 +4275,6 @@ Value* GlobalVariableAST::codegen(){
 }
 
 Function* FunctionAST::codegen(){
-  cout<<"Function codegen\n";
   Function *TheFunction = TheModule->getFunction(Proto->getName());
 
 if (!TheFunction)
@@ -4688,17 +4284,10 @@ if (!TheFunction)
  BasicBlock *BB = BasicBlock::Create(TheContext, "entry", TheFunction);
  Builder.SetInsertPoint(BB);
  // Record the function arguments in the NamedValues map.
-//  NamedValues.clear();
  std::map<std::string, AllocaInst*> NamedValues;
 
  for (auto &Arg : TheFunction->args()) //loading each argument in the symbol table
  {
-  // if(!Arg.getType()->isVoidTy()) //ignore void
-  // {
-  //   AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, Arg.getName().str()); //creating an alloca for each argument
-  //   Builder.CreateStore(&Arg, Alloca);
-  //   NamedValues[std::string(Arg.getName())] = Alloca;
-  // }
     string type = "";
     if(Arg.getType()->isIntegerTy(32))
       type = "int";
@@ -4711,8 +4300,6 @@ if (!TheFunction)
     Builder.CreateStore(&Arg, Alloca);
     NamedValues[std::string(Arg.getName())] = Alloca;
  }
-
-cout<<"ARgs "<<NamedValues.size()<<"stored now"<<endl;
   
  NamedValuesList.push_back(NamedValues);
 
@@ -4746,7 +4333,7 @@ for(int i = 0; i < Body.size(); i++)
   if(returnSet) //do not generate further instructions after the return statement
     break;
 
-  Value *RetVal = Body.at(i)->codegen(); //go through all ASTnodes in this function body and run codegen()
+  Value *RetVal = Body.at(i)->codegen(); //go through all ASTnodes in this function body and run codegen() for each ASTnode
   if(!RetVal)
   {
     return nullptr;
@@ -4754,40 +4341,8 @@ for(int i = 0; i < Body.size(); i++)
   
   if((i == Body.size()-1) | isa<ReturnInst>(RetVal)) //check last ASTnode of function body or check for a return expression that has been made in the body early
   {
-    // if((TheFunction->getReturnType()->isVoidTy()))
-    // {
-    //   Builder.CreateRetVoid(); //create void return for void functions
-    // }
-    // else
-    // { 
       if(auto RT = dyn_cast<ReturnInst>(RetVal)) //if last statement is a return statement
       {
-        // Value* returnVal = RT->getReturnValue(); 
-        // //checking if the return statement is the correct type - matches the return type of the function
-        // if(returnVal->getType()->isIntegerTy(32))
-        // {
-        //   if(returnType != "int")
-        //   {
-        //     cout<<"Semantic Error: Incorrect return value of type `int` used in function: "<<Proto->getName()<<".\nExpected return type `"<<returnType<<"`.\n";
-        //     return nullptr;
-        //   }
-        // }
-        // if(returnVal->getType()->isIntegerTy(1)) 
-        // {
-        //   if(returnType != "bool")
-        //   {
-        //     cout<<"Semantic Error: Incorrect return value of type `bool` used in function: "<<Proto->getName()<<".\nExpected return type `"<<returnType<<"`.\n";
-        //     return nullptr;
-        //   }
-        // }
-        // if(returnVal->getType()->isFloatTy())
-        // {
-        //   if(returnType != "float")
-        //   {
-        //     cout<<"Semantic Error: Incorrect return value of type `float` used in function: "<<Proto->getName()<<".\nExpected return type `"<<returnType<<"`.\n";
-        //     return nullptr;
-        //   }
-        // }
         returnSet = true; //make sure last line is a return stmt
       }
       else if((i == Body.size()-1) & (returnType == "void"))
@@ -4797,12 +4352,10 @@ for(int i = 0; i < Body.size(); i++)
       }
       else //return statement not found
       {
-        cout<<"Semantic Error: Return statement of type `"<<returnType<<"` expected in function: "<<Proto->getName()<<".\n";
+        errs()<<"Semantic Error: Return statement of type `"<<returnType<<"` expected in function: "<<Proto->getName()<<".\n";
         return nullptr;
       }
-  
   }
-  
 }
 
 // Validate the generated code, checking
@@ -4812,8 +4365,6 @@ for(int i = 0; i < Body.size(); i++)
  NamedValuesList.pop_back(); //remove NamedValues of this function from the vector
 
  return TheFunction;
-
- // return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4821,8 +4372,8 @@ for(int i = 0; i < Body.size(); i++)
 //===----------------------------------------------------------------------===//
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
-                                     const unique_ptr<TopLevelASTnode> &ast) { //changes made
-  os << ast->to_string(); //changes made
+                                     const unique_ptr<TopLevelASTnode> &ast) { 
+  os << ast->to_string(); 
   return os;
 }
 
@@ -4850,7 +4401,7 @@ int main(int argc, char **argv) {
   while (CurTok.type != EOF_TOK) {
     if(CurTok.type == INVALID)
     {
-      cout<<"Lexical error: Invalid token "<<CurTok.lexeme<<" found at line "<<CurTok.lineNo<<" column "<<CurTok.columnNo<<endl;
+      errs()<<"Lexical error: Invalid token "<<CurTok.lexeme<<" found at line no. "<<CurTok.lineNo<<" column no. "<<CurTok.columnNo<<".\n"; //print error and exit if invalid token is found
       return 1;
     }
     //print each token
@@ -4879,7 +4430,6 @@ int main(int argc, char **argv) {
   }
   //fprintf(stderr, "Parsing Finished\n");
 
-
   //Printing out AST
   llvm::outs() << "\nPrinting out AST:"<< "\n\n";
   llvm::outs() << "root"<< "\n|\n";
@@ -4900,7 +4450,6 @@ int main(int argc, char **argv) {
     {
       llvm::outs() << "|-> " << root[i]<< "\n|\n";
     }
-      // llvm::outs() << "  |-> " << root[i] << "\n";
   }
 
   llvm::outs() << "\nAST successfully printed."<< "\n\n";

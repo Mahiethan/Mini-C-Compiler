@@ -1,0 +1,68 @@
+FIRST(programStart) = {"extern", "void", "int", "float", "bool"}
+FIRST(program) = {"extern", "void", "int", "float", "bool"}
+FIRST(extern_list) = {"extern"}
+FIRST(extern_list') = {"extern"}
+FIRST(extern) = {"extern"}
+FIRST(type_spec) = {"void", "int", "float", "bool"}
+FIRST(decl_list) = {"void", "int", "float", "bool"}
+FIRST(decl_list') = {"void", "int", "float", "bool", epsilon}
+FIRST(decl) = {"void", "int", "float", "bool"}
+FIRST(decl') = {";", "("}
+FIRST(var_type) = {"int", "float", "bool"}
+FIRST(params) = {"int", "float", "bool", "void", epsilon}
+FIRST(param_list) = {"int", "float", "bool"}
+FIRST(param_list') = {",", epsilon}
+FIRST(param) = {"int", "float", "bool"}
+FIRST(block) = {"{"}
+FIRST(local_decls) = {"int", "float", "bool", epsilon}
+FIRST(local_decl) = {"int", "float", "bool"}
+FIRST(stmt_list) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, ";", "{", "if", "while", "return", epsilon}
+FIRST(stmt) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, ";", "{", "if", "while", "return"}
+FIRST(expr_stmt) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, ";"}
+FIRST(while_stmt) = {"while"}
+FIRST(if_stmt) = {"if"}
+FIRST(else_stmt) = {"else", epsilon}
+FIRST(return_stmt) = {"return"}
+FIRST(return_stmt') = {";", "-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
+FIRST(exprStart) = {IDENT, epsilon}
+FIRST(expr) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
+FIRST(rval_eight) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
+FIRST(rval_eight') = {"||", epsilon}
+FIRST(rval_seven) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
+FIRST(rval_seven') = {"&&", epsilon}
+FIRST(rval_six) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
+FIRST(rval_six') = {"==", "!=", epsilon}
+FIRST(rval_five) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
+FIRST(rval_five') = {"<=", "<", ">=", ">", epsilon}
+FIRST(rval_four) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
+FIRST(rval_four') = {"+", "-", epsilon}
+FIRST(rval_three) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
+FIRST(rval_three') = {"*", "/", "%", epsilon}
+FIRST(rval_two) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
+FIRST(rval_one) = {"(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
+FIRST(rval) = {"(", epsilon}
+FIRST(args) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, epsilon}
+FIRST(arg_list) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
+FIRST(arg_list') = {",", epsilon}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+FOLLOW(extern_list') = {"void", "int", "float", "bool"}
+FOLLOW(decl_list') = {$}
+FOLLOW(params) = {")"}
+FOLLOW(param_list') = {")"}
+FOLLOW(local_decls) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, ";", "{", "if", "while", "return", "}"}
+FOLLOW(stmt_list) = {"}"}
+FOLLOW(else_stmt) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT, ";", "{", "if", "while", "return", "}"}
+FOLLOW(exprStart) = {"-", "!", "(", IDENT, INT_LIT, FLOAT_LIT, BOOL_LIT}
+FOLLOW(rval_eight') = {";", ")", ","}
+FOLLOW(rval_seven') = {"||", ";", ")", ","}
+FOLLOW(rval_six') = {"&&", "||", ";", ")", ","}
+FOLLOW(rval_five') = {"==", "!=", "&&", "||", ";", ")", ","}
+FOLLOW(rval_four') = {"<=", "<", ">=", ">", "==", "!=", "&&", "||", ";", ")", ","}
+FOLLOW(rval_three') = {"+", "-", "<=", "<", ">=", ">", "==", "!=", "&&", "||", ";", ")", ","}
+FOLLOW(rval) = {"*", "/", "%", "+", "-", "<=", "<", ">=", ">", "==", "!=", "&&", "||", ";", ")", ","}
+FOLLOW(args) = {")"}
+FOLLOW(arg_list') = {")"}
