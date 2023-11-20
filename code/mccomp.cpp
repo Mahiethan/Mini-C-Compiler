@@ -597,10 +597,11 @@ class VariableReferenceASTnode : public ASTnode{
 class UnaryExprASTnode : public ASTnode {
   string Opcode;
   std::unique_ptr<ASTnode> Operand;
+  TOKEN Tok;
 
 public:
-  UnaryExprASTnode(string Opcode, std::unique_ptr<ASTnode> Operand)
-      : Opcode(Opcode), Operand(std::move(Operand)) {}
+  UnaryExprASTnode(string Opcode, std::unique_ptr<ASTnode> Operand, TOKEN tok)
+      : Opcode(Opcode), Operand(std::move(Operand)), Tok(tok) {}
 
   virtual Value *codegen() override;
   virtual std::string to_string() const override {
@@ -615,11 +616,12 @@ public:
 class BinaryExprASTnode : public ASTnode {
   string Opcode;
   std::unique_ptr<ASTnode> LHS, RHS;
+  TOKEN Tok;
 
 public:
   BinaryExprASTnode(string Opcode, std::unique_ptr<ASTnode> LHS,
-                std::unique_ptr<ASTnode> RHS)
-      : Opcode(Opcode), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
+                std::unique_ptr<ASTnode> RHS, TOKEN tok)
+      : Opcode(Opcode), LHS(std::move(LHS)), RHS(std::move(RHS)), Tok(tok) {}
 
   virtual Value *codegen() override;
   virtual std::string to_string() const override {
@@ -634,11 +636,12 @@ public:
 class FuncCallASTnode : public ASTnode {
   std::string Callee;
   std::vector<std::unique_ptr<ASTnode>> Args;
+  TOKEN Tok;
 
 public:
   FuncCallASTnode(const std::string &Callee,
-              std::vector<std::unique_ptr<ASTnode>> Args)
-      : Callee(Callee), Args(std::move(Args)) {}
+              std::vector<std::unique_ptr<ASTnode>> Args, TOKEN tok)
+      : Callee(Callee), Args(std::move(Args)), Tok(tok) {}
 
   virtual Value *codegen() override;
   virtual std::string to_string() const override {
@@ -767,6 +770,7 @@ public:
   virtual ~TopLevelASTnode() {}
   virtual Value *codegen() = 0;
   virtual std::string to_string() const {return "";};
+  // virtual TOKEN getTok() const {return {};};
 };
 
 //GlobalVariableAST - This class represents global variable declarations
@@ -1473,7 +1477,7 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
     for(int i = 1; i < expression.size(); i++)
       operand.push_back(expression.at(i));
 
-    return std::move(make_unique<UnaryExprASTnode>(opcode,std::move(createExprASTnode(operand))));
+    return std::move(make_unique<UnaryExprASTnode>(opcode,std::move(createExprASTnode(operand)),expression.at(0)));
   }
   else if((expression.at(0).lexeme == "(") & (isMatchingLastParam(expression) == true)) //bracketed expr - start to end e.g (a + d + (a+f)) not (a+f)+(-e+d)
   {
@@ -1487,6 +1491,7 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
   }
   else if((expression.at(0).type == IDENT) & (expression.at(1).type == LPAR)) //function call with or without arguments
   {
+    TOKEN funcTok = expression.at(0);
     string callee = expression.at(0).lexeme;
     // if(expression.size() > 1)
     // {
@@ -1526,7 +1531,7 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
         }
       }
       }
-      return std::move(make_unique<FuncCallASTnode>(callee,std::move(args)));
+      return std::move(make_unique<FuncCallASTnode>(callee,std::move(args),funcTok));
     // }
     // else //no args
     // {
@@ -1537,6 +1542,7 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
   {
     int minPrecedence = 100;
     string op = "";
+    TOKEN opTok;
     int index = 0;
     bool isOp = true;
     bool unaryEnd = true;
@@ -1576,6 +1582,7 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
         if((currPrecedence <= minPrecedence) & (isOp == false) & (valid == 0)) //get lowest precedence operator, avoiding any unary operators
         { 
           op = expression.at(i).lexeme;
+          opTok = expression.at(i);
           // cout<<op<<endl;
           minPrecedence = currPrecedence;
           //cout<<minPrecedence<<endl;
@@ -1614,7 +1621,7 @@ unique_ptr<ASTnode> createExprASTnode(vector<TOKEN> expression)
     cout<<op<<endl;
     // cout<<"printing"<<endl;
     // printExpression(expression);
-    return std::move(make_unique<BinaryExprASTnode>(op, std::move(createExprASTnode(lhs)), std::move(createExprASTnode(rhs)))); //recursive
+    return std::move(make_unique<BinaryExprASTnode>(op, std::move(createExprASTnode(lhs)), std::move(createExprASTnode(rhs)),opTok)); //recursive
   }
   return nullptr; //error
 }
@@ -3525,7 +3532,7 @@ Value *VariableASTnode::codegen() {
     else if(NamedValues[Val]->getAllocatedType()->isFloatTy())
       existTy = "float";
     
-    errs()<<"Semantic error: Redefinition of variable "<<Val<<" with different type "<<Type<<". Variable "<<Val<<" of type "<<existTy<<" already exists within current scope.\n";
+    errs()<<"Semantic error: Redefinition of variable "<<Val<<" with different type "<<Type<<" at column no. "<<Tok.columnNo<<", line no. "<<Tok.lineNo<<". Variable "<<Val<<" of type "<<existTy<<" already exists within current scope.\n";
     return nullptr;
   }
   //Value* var = Builder.CreateLoad(Type::getInt32Ty(TheContext), varAlloca, Val);
@@ -3563,7 +3570,7 @@ Value *VariableReferenceASTnode::codegen() {
   GlobalVariable *GV = GlobalVariables[Name];
   if(!GV)
   {
-    errs()<<"Semantic error: Unknown variable name: "<<Name<<"\n";
+    errs()<<"Semantic error: Unknown variable name: "<<Name<<" at line no. "<<Tok.lineNo<<" column no. "<<Tok.columnNo<<".\n";
     return nullptr;
   }
   else 
@@ -3624,7 +3631,7 @@ Value* UnaryExprASTnode::codegen()
       return Builder.CreateNot(operand,"not_temp");
     else
     {
-      errs()<<"Semantic error:  Cannot cast from `"<<type<<"` to `bool` at \n";
+      errs()<<"Semantic error:  Cannot cast from `"<<type<<"` to `bool` at line no. "<<Tok.lineNo<<" column no. "<<Tok.columnNo<<".\n";
       return nullptr;    }
   }
   else if(Opcode == "-")
@@ -3818,7 +3825,7 @@ Value* BinaryExprASTnode::codegen(){
 
         if(lhsType < rhsType)
         {
-          errs()<<"Semantic error: Widening conversion not possible from RHS type "<<rhsTypeStr<<" to LHS type "<<lhsTypeStr<<"\n";
+          errs()<<"Semantic error: Widening conversion not possible from RHS type "<<rhsTypeStr<<" to LHS type "<<lhsTypeStr<<" at line no. "<<Tok.lineNo<<" column no. "<<Tok.columnNo<<".\n";
           return nullptr;
         }
         else if(lhsType > rhsType)//perform widening conversions
@@ -3891,14 +3898,14 @@ Value* BinaryExprASTnode::codegen(){
 
       if(lhsType == 2 | rhsType == 2)
       {
-        errs()<<"Semantic error: Cannot cast from `float` to `bool` at .\n";
+        errs()<<"Semantic error: Cannot cast from `float` to `bool` at line no. "<<Tok.lineNo<<" column no. "<<Tok.columnNo<<".\n";
         return nullptr;
       }
 
       
       if(lhsType == 1 | rhsType == 1)
       {
-        errs()<<"Semantic error: Cannot cast from `int` to `bool` at .\n";
+        errs()<<"Semantic error: Cannot cast from `int` to `bool` at line no. "<<Tok.lineNo<<" column no. "<<Tok.columnNo<<".\n";
         return nullptr;
       }
     }
@@ -3989,7 +3996,7 @@ Value* BinaryExprASTnode::codegen(){
       {
         if(rhs == ConstantInt::get(TheContext, APInt(32,int(0),false)) | rhs == ConstantInt::get(TheContext, APInt(1,int(false),false)) | rhs == ConstantFP::get(TheContext, APFloat(float(0.0))))
         {
-          errs()<<"Semantic error: Division by zero not permitted.\n";
+          errs()<<"Semantic error: Division by zero not permitted at line no. "<<Tok.lineNo<<" column no. "<<Tok.columnNo<<".\n";
           return nullptr;
         }
 
@@ -4002,7 +4009,7 @@ Value* BinaryExprASTnode::codegen(){
       {
         if(rhs == ConstantInt::get(TheContext, APInt(32,int(0),false)) | rhs == ConstantInt::get(TheContext, APInt(1,int(false),false)) | rhs == ConstantFP::get(TheContext, APFloat((float)0.0)))
         {
-          errs()<<"Semantic error: Taking remainder of division with zero not permitted.\n";
+          errs()<<"Semantic error: Taking remainder of division with zero not permitted at line no. "<<Tok.lineNo<<" column no. "<<Tok.columnNo<<".\n";
           return nullptr;
         }
 
@@ -4082,13 +4089,13 @@ Value* FuncCallASTnode::codegen(){
   Function *CalleeF = TheModule->getFunction(Callee);
   if (!CalleeF)
   {
-    errs()<<"Semantic error: Unknown function "<<Callee<<" referenced.\n";
+    errs()<<"Semantic error: Unknown function "<<Callee<<" referenced at line no. "<<Tok.lineNo<<" column no. "<<Tok.columnNo<<".\n";
     return nullptr;
   }
   // If argument mismatch error.
   if (CalleeF->arg_size() != Args.size())
   {
-    errs()<<"Semantic error: Incorrect no. of arguments passed for function "<<Callee<<".\n";
+    errs()<<"Semantic error: Incorrect no. of arguments passed for function "<<Callee<<" at line no. "<<Tok.lineNo<<" column no. "<<Tok.columnNo<<".\n";
     return nullptr;
   }
   
@@ -4169,14 +4176,14 @@ Value* FuncCallASTnode::codegen(){
     {
       if(actualTypeStr == "bool")
       {
-        errs()<<"Semantic error: Cannot cast from `"<<currType<<"` to `"<<actualTypeStr<<"`.\n";
+        errs()<<"Semantic error: Cannot cast from `"<<currType<<"` to `"<<actualTypeStr<<"` at line no. "<<Tok.lineNo<<" column no. "<<Tok.columnNo<<".\n";
         return nullptr;
       }
       else if(actualTypeStr == "int")
       {
         if(currType == "float")
         {
-          errs()<<"Semantic error: Cannot cast from `"<<currType<<"` to `"<<actualTypeStr<<"`.\n";
+          errs()<<"Semantic error: Cannot cast from `"<<currType<<"` to `"<<actualTypeStr<<"` at line no. "<<Tok.lineNo<<" column no. "<<Tok.columnNo<<".\n";
           return nullptr;
         }
         else //bool to int
@@ -4664,7 +4671,7 @@ Value* GlobalVariableAST::codegen(){
     else if(GlobalVariables[Val]->getValueType()->isFloatTy())
       existTy = "float";
     
-    errs()<<"Semantic error: Redefinition of global variable "<<Val<<" with different type "<<ty<<". Variable "<<Val<<" of type "<<existTy<<" already exists.\n";
+    errs()<<"Semantic error: Redefinition of global variable "<<Val<<" with different type "<<ty<<" at line no. "<<Tok.lineNo<<" column no. "<<Tok.columnNo<<". Variable "<<Val<<" of type "<<existTy<<" already exists.\n";
     return nullptr;
   }
   return g;
@@ -4909,10 +4916,6 @@ int main(int argc, char **argv) {
     errs() << "Could not open file: " << EC.message();
     return 1;
   }
-
-  //JUST FOR TESTING - REMOVE LATER
-  // ConstantInt *zero = ConstantInt::get(IntegerType::getInt32Ty(TheContext), 0);
-  // Builder.CreateRet(zero);
 
   // TheModule->print(errs(), nullptr); // print IR to terminal
   TheModule->print(dest, nullptr);

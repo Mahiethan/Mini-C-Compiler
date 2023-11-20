@@ -447,12 +447,12 @@ int main()
     o = -o;
     o = !globool;
     combo = true + 10.0;
-    {
-        int combo;
-        a = 5;
-        b = a;
-        // print_int(b);
-    }
+    // {
+    //     int combo;
+    //     a = 5;
+    //     b = a;
+    //     // print_int(b);
+    // }
     // o = !o; //cannot do narrow conversion from int to bool
 
     //WORKS
