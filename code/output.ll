@@ -98,7 +98,7 @@ while_cond:                                       ; preds = %if_end, %if_then
   br i1 %if_cond3, label %while_body, label %while_end13
 
 while_body:                                       ; preds = %while_cond
-  store i32 20, ptr %o, align 4
+  store i32 0, ptr %o, align 4
   %load_temp6 = load i32, ptr %ty, align 4
   %ne_tmp = icmp ne i32 %load_temp6, 19
   %if_cond7 = icmp ne i1 %ne_tmp, false
@@ -142,10 +142,14 @@ if_end14:                                         ; preds = %if_else, %while_end
   %btoi_cast = zext i1 %not_temp to i32
   store i32 %btoi_cast, ptr %o, align 4
   store float 1.100000e+01, ptr %combo, align 4
-  %load_temp17 = load i32, ptr %o, align 4
-  %sub_tmp = sub i32 %load_temp17, -9
-  %itof_cast = sitofp i32 %sub_tmp to float
-  store float %itof_cast, ptr %combo, align 4
+  store i32 5, ptr @a, align 4
+  %load_global_temp17 = load i32, ptr @a, align 4
+  %itof_cast = sitofp i32 %load_global_temp17 to float
+  store float %itof_cast, ptr @b, align 4
+  %load_temp18 = load i32, ptr %o, align 4
+  %sub_tmp = sub i32 %load_temp18, -9
+  %itof_cast19 = sitofp i32 %sub_tmp to float
+  store float %itof_cast19, ptr %combo, align 4
   store float 5.000000e+00, ptr %combo, align 4
   ret i32 0
 }

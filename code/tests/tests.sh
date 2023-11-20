@@ -50,6 +50,17 @@ unary=1
 palindrome=1
 recurse=1
 rfact=1
+#extra tests
+assign=1
+associativity=1
+global=1
+implicit=1
+# infinte=1 #infinite test - run manually
+# lazyeval=1 #fails for expr - only works for constants - mention in report
+returns=1
+# scope=1 #fails - not implemented - mention in report
+# unary2=1 #cannot do - narrowing conversions denied
+while2=1
 
 cd tests/addition/
 
@@ -162,6 +173,98 @@ then
 	"$COMP" ./palindrome.c
 	$CLANG driver.cpp output.ll -o palindrome
 	validate "./palindrome"
+fi
+
+# Extra tests
+
+if [ $assign == 1 ];
+then	
+	cd ../assign
+	pwd
+	rm -rf output.ll assign
+	"$COMP" ./assign.c
+	$CLANG driver.cpp output.ll -o assign
+	validate "./assign"
+fi
+
+if [ $associativity == 1 ];
+then	
+	cd ../associativity
+	pwd
+	rm -rf output.ll associativity
+	"$COMP" ./associativity.c
+	$CLANG driver.cpp output.ll -o associativity
+	validate "./associativity"
+fi
+
+if [ $global == 1 ];
+then	
+	cd ../global
+	pwd
+	rm -rf output.ll global
+	"$COMP" ./global.c
+	$CLANG driver.cpp output.ll -o global
+	validate "./global"
+fi
+
+if [ $implicit == 1 ];
+then	
+	cd ../implicit
+	pwd
+	rm -rf output.ll implicit
+	"$COMP" ./implicit.c
+	$CLANG driver.cpp output.ll -o implicit
+	validate "./implicit"
+fi
+
+# if [ $lazyeval == 1 ];
+# then	
+# 	cd ../lazyeval
+# 	pwd
+# 	rm -rf output.ll lazyeval
+# 	"$COMP" ./lazyeval.c
+# 	$CLANG driver.cpp output.ll -o lazyeval
+# 	validate "./lazyeval"
+# fi
+
+if [ $returns == 1 ];
+then	
+	cd ../returns
+	pwd
+	rm -rf output.ll returns
+	"$COMP" ./returns.c
+	$CLANG driver.cpp output.ll -o returns
+	validate "./returns"
+fi
+
+# if [ $scope == 1 ];
+# then	
+# 	cd ../scope
+# 	pwd
+# 	rm -rf output.ll scope
+# 	"$COMP" ./scope.c
+# 	$CLANG driver.cpp output.ll -o scope
+# 	validate "./scope"
+# fi
+
+# if [ $unary2 == 1 ];
+# then	
+# 	cd ../unary2
+# 	pwd
+# 	rm -rf output.ll unary2
+# 	"$COMP" ./unary2.c
+# 	$CLANG driver.cpp output.ll -o unary2
+# 	validate "./unary2"
+# fi
+
+if [ $while2 == 1 ];
+then	
+	cd ../while2
+	pwd
+	rm -rf output.ll while2
+	"$COMP" ./while2.c
+	$CLANG driver.cpp output.ll -o while2
+	validate "./while2"
 fi
 
 echo "***** ALL TESTS PASSED *****"

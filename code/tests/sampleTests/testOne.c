@@ -413,7 +413,7 @@ int main()
         while(ty == 10) //while_cond
         {
             //while_body
-            o = 20;
+            o = false;
             if(ty != 19)//if_then4
             {
                 int hg;
@@ -447,6 +447,12 @@ int main()
     o = -o;
     o = !globool;
     combo = true + 10.0;
+    {
+        int combo;
+        a = 5;
+        b = a;
+        // print_int(b);
+    }
     // o = !o; //cannot do narrow conversion from int to bool
 
     //WORKS

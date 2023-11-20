@@ -3525,7 +3525,7 @@ Value *VariableASTnode::codegen() {
     else if(NamedValues[Val]->getAllocatedType()->isFloatTy())
       existTy = "float";
     
-    errs()<<"Semantic error: Redefinition of global variable "<<Val<<" with different type "<<Type<<". Variable "<<Val<<" of type "<<existTy<<" already exists.\n";
+    errs()<<"Semantic error: Redefinition of variable "<<Val<<" with different type "<<Type<<". Variable "<<Val<<" of type "<<existTy<<" already exists within current scope.\n";
     return nullptr;
   }
   //Value* var = Builder.CreateLoad(Type::getInt32Ty(TheContext), varAlloca, Val);
@@ -3649,8 +3649,9 @@ Value* UnaryExprASTnode::codegen()
 
 Value* BinaryExprASTnode::codegen(){
   cout<<"Binary codegen\n";
+  cout<<"OP: "<<Opcode<<endl;
   Value* lhs = LHS->codegen();
-  //boolean short circuit code generation for logical operators || and &&
+  //boolean short circuit code generation for logical operators || and && - only works for constants
   if(Opcode == "&&")
   {
     if(lhs == ConstantInt::get(TheContext, APInt(1,int(false),false))) //return false if lhs is false
@@ -4488,6 +4489,10 @@ Value* ReturnExprASTnode::codegen(){
   {
     returnExpr = Builder.CreateLoad(AI->getAllocatedType(),returnExpr,"load_temp");
   }
+  else if(auto *GV = dyn_cast<GlobalVariable>(returnExpr))
+  {
+    returnExpr = Builder.CreateLoad(GV->getValueType(),returnExpr,"load_global_temp");
+  }
 
   string correctType = FuncReturnType;
   string actualType = "";
@@ -4712,6 +4717,8 @@ cout<<"ARgs "<<NamedValues.size()<<"stored now"<<endl;
     returnType = "bool"; // returnType = "bool (i1)";
   else if(TheFunction->getReturnType()->isFloatTy())
     returnType = "float"; //    returnType = "float (float)";
+  else if(TheFunction->getReturnType()->isVoidTy())
+    returnType = "void";
 
 if(Body.size() == 0)//empty function body
 {
@@ -4775,6 +4782,11 @@ for(int i = 0; i < Body.size(); i++)
         //   }
         // }
         returnSet = true; //make sure last line is a return stmt
+      }
+      else if((i == Body.size()-1) & (returnType == "void"))
+      {
+        Builder.CreateRetVoid();
+        returnSet = true;
       }
       else //return statement not found
       {
